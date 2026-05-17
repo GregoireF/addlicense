@@ -24,10 +24,10 @@ jobs:
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
 
-      - name: Download deps
-        run: go mod download
+      - name: Tidy
+        run: go mod tidy
 
       - name: Vet
         run: go vet ./...
@@ -48,7 +48,10 @@ jobs:
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
+
+      - name: Tidy
+        run: go mod tidy
 
       - uses: golangci/golangci-lint-action@v6
         with:

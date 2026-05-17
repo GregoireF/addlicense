@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -30,16 +31,35 @@ type fileConfig struct {
 	Year    int      `yaml:"year"`
 }
 
-// Load merges file config into opts, but CLI flags already set on opts take precedence.
+// Load merges file config into opts; CLI flags already set on opts take precedence.
+// Search order: CWD, then first element of opts.Paths (if it differs from CWD).
 func Load(opts *Options) error {
-	fc, err := findAndParse()
-	if err != nil {
-		return err
-	}
-	if fc == nil {
-		return nil
+	searchDirs := []string{"."}
+	if len(opts.Paths) > 0 {
+		abs, err := filepath.Abs(opts.Paths[0])
+		if err == nil {
+			cwd, _ := os.Getwd()
+			if abs != cwd {
+				searchDirs = append(searchDirs, abs)
+			}
+		}
 	}
 
+	for _, dir := range searchDirs {
+		fc, err := findAndParse(dir)
+		if err != nil {
+			return err
+		}
+		if fc == nil {
+			continue
+		}
+		merge(opts, fc)
+		return nil
+	}
+	return nil
+}
+
+func merge(opts *Options, fc *fileConfig) {
 	if opts.License == "" && fc.License != "" {
 		opts.License = fc.License
 	}
@@ -52,8 +72,6 @@ func Load(opts *Options) error {
 	if opts.Year == 0 && fc.Year != 0 {
 		opts.Year = fc.Year
 	}
-
-	return nil
 }
 
 func (o *Options) Normalize() {
@@ -75,18 +93,19 @@ var candidates = []string{
 	"addlicense.json",
 }
 
-func findAndParse() (*fileConfig, error) {
+func findAndParse(dir string) (*fileConfig, error) {
 	for _, name := range candidates {
-		data, err := os.ReadFile(name)
+		path := filepath.Join(dir, name)
+		data, err := os.ReadFile(path)
 		if os.IsNotExist(err) {
 			continue
 		}
 		if err != nil {
-			return nil, fmt.Errorf("reading %s: %w", name, err)
+			return nil, fmt.Errorf("reading %s: %w", path, err)
 		}
 		var fc fileConfig
 		if err := yaml.Unmarshal(data, &fc); err != nil {
-			return nil, fmt.Errorf("parsing %s: %w", name, err)
+			return nil, fmt.Errorf("parsing %s: %w", path, err)
 		}
 		return &fc, nil
 	}

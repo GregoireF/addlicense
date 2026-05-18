@@ -4,7 +4,6 @@
 package injector
 
 import (
-	"bufio"
 	"os"
 	"strings"
 )
@@ -14,23 +13,22 @@ const scanLines = 20
 // HasHeader reports whether the file already contains a license header.
 // It checks the first scanLines lines for SPDX identifiers or copyright notices.
 func HasHeader(path string) (bool, error) {
-	f, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return false, err
 	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	n := 0
-	for scanner.Scan() && n < scanLines {
-		line := strings.ToLower(scanner.Text())
-		if strings.Contains(line, "spdx-license-identifier") ||
-			strings.Contains(line, "copyright") {
+	lines := strings.SplitN(string(data), "\n", scanLines+1)
+	if len(lines) > scanLines {
+		lines = lines[:scanLines]
+	}
+	for _, line := range lines {
+		lower := strings.ToLower(line)
+		if strings.Contains(lower, "spdx-license-identifier") ||
+			strings.Contains(lower, "copyright") {
 			return true, nil
 		}
-		n++
 	}
-	return false, scanner.Err()
+	return false, nil
 }
 
 // Inject prepends header to the file, respecting shebangs and file encoding.

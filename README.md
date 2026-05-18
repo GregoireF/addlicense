@@ -3,6 +3,7 @@
 > Fast, minimal license header manager for monorepos and CI pipelines.
 
 [![CI](https://github.com/GregoireF/addlicense/actions/workflows/ci.yml/badge.svg)](https://github.com/GregoireF/addlicense/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/GregoireF/addlicense/graph/badge.svg)](https://codecov.io/gh/GregoireF/addlicense)
 [![Go version](https://img.shields.io/github/go-mod/go-version/GregoireF/addlicense)](go.mod)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/GregoireF/addlicense)](https://github.com/GregoireF/addlicense/releases)
@@ -101,9 +102,11 @@ addlicense --ignore dist,vendor,*.gen.go .
 
 | Extension | Comment style |
 | :-- | :-- |
-| `.go` `.ts` `.tsx` `.js` `.jsx` `.rs` `.swift` `.kt` `.scala` `.php` `.cs` | `//` |
-| `.java` `.c` `.cpp` `.h` | `/* */` |
+| `.go` `.ts` `.tsx` `.js` `.jsx` `.rs` `.swift` `.kt` `.scala` `.php` `.cs` `.proto` | `//` |
+| `.java` `.c` `.cpp` `.h` `.css` `.scss` | `/* */` |
+| `.html` `.vue` `.svelte` | `<!-- -->` |
 | `.py` `.sh` `.bash` `.yaml` `.yml` `.tf` `.toml` `.rb` | `#` |
+| `.sql` | `--` |
 
 More languages are added on request — open an issue.
 

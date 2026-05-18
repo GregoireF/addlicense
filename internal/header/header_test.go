@@ -22,6 +22,15 @@ func TestLangFor(t *testing.T) {
 		{".yaml", true},
 		{".tf", true},
 		{".rs", true},
+		// v0.2.0 additions
+		{".proto", true},
+		{".vue", true},
+		{".svelte", true},
+		{".html", true},
+		{".css", true},
+		{".scss", true},
+		{".sql", true},
+		// unsupported
 		{".md", false},
 		{".json", false},
 	}
@@ -63,6 +72,32 @@ func TestRenderBlockComment(t *testing.T) {
 
 	if !strings.Contains(got, "/*") || !strings.Contains(got, "*/") {
 		t.Errorf("missing block comment markers, got:\n%s", got)
+	}
+}
+
+func TestRenderHTMLComment(t *testing.T) {
+	lang := header.LangFor(".html")
+	data := header.Data{Year: 2026, Author: "Grégoire", License: "MIT", SPDX: "MIT"}
+
+	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	if !strings.Contains(got, "<!--") || !strings.Contains(got, "-->") {
+		t.Errorf("missing HTML comment markers, got:\n%s", got)
+	}
+}
+
+func TestRenderSQLComment(t *testing.T) {
+	lang := header.LangFor(".sql")
+	data := header.Data{Year: 2026, Author: "Grégoire", License: "MIT", SPDX: "MIT"}
+
+	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	if !strings.Contains(got, "-- Copyright") {
+		t.Errorf("missing SQL comment prefix, got:\n%s", got)
 	}
 }
 

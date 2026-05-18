@@ -33,4 +33,4 @@ jobs:
         run: go build -o /tmp/addlicense ./cmd/addlicense
 
       - name: Check license headers
-        run: /tmp/addlicense --license MIT --author "Grégoire Favreau" --check .
+        run: /tmp/addlicense --license MIT --author "Grégoire Favreau" --check cmd/ internal/

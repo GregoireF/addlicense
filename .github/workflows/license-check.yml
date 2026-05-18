@@ -1,0 +1,36 @@
+name: License headers
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: license-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check license headers
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Tidy
+        run: go mod tidy
+
+      - name: Build addlicense
+        run: go build -o /tmp/addlicense ./cmd/addlicense
+
+      - name: Check license headers
+        run: /tmp/addlicense --license MIT --author "Grégoire Favreau" --check .

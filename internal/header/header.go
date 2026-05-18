@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2026 Grégoire Favreau
+
 package header
 
 import (

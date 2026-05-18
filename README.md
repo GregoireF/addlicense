@@ -1,160 +1,217 @@
 # addlicense
 
-> Fast, minimal and developer-friendly license header manager.
+> Fast, minimal license header manager for monorepos and CI pipelines.
 
-`addlicense` helps you automatically add, update and maintain license headers across your projects.
-
-Designed for:
-- OSS maintainers
-- monorepos
-- CI pipelines
-- developer tooling ecosystems
-- compliance automation
+[![CI](https://github.com/GregoireF/addlicense/actions/workflows/ci.yml/badge.svg)](https://github.com/GregoireF/addlicense/actions/workflows/ci.yml)
+[![Go version](https://img.shields.io/github/go-mod/go-version/GregoireF/addlicense)](go.mod)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/GregoireF/addlicense)](https://github.com/GregoireF/addlicense/releases)
 
 ---
 
-# Features
+## What it does
 
-- blazing fast
-- recursive scanning
-- multi-language support
-- customizable templates
-- CI-friendly
-- idempotent operations
-- monorepo aware
-- zero-config defaults
+`addlicense` scans a directory tree, detects which files are missing a license header, and injects one. On the second run, it does nothing — already-licensed files are left untouched.
 
----
+```
+addlicense --license MIT .
+```
 
-# Why
-
-Most license tools are:
-- outdated
-- hard to configure
-- language-limited
-- not CI-native
-
-`addlicense` focuses on:
-- simplicity
-- modern DX
-- automation
-- developer workflows
+That's the common case. No config required.
 
 ---
 
-# Installation
+## Installation
+
+**Homebrew**
 
 ```bash
-npm install -g addlicense
+brew install GregoireF/tap/addlicense
+```
+
+**Binary** — download from [Releases](https://github.com/GregoireF/addlicense/releases) (Linux, macOS, Windows — amd64 / arm64).
+
+**Docker** — no installation needed:
+
+```bash
+docker run --rm -v "$PWD:/src" -w /src ghcr.io/gregoiref/addlicense --license MIT .
+```
+
+**Go install**
+
+```bash
+go install github.com/GregoireF/addlicense/cmd/addlicense@latest
 ```
 
 ---
 
-# Quick Start
+## Quick start
 
-## Add MIT headers
+**Add MIT headers**
 
 ```bash
 addlicense --license MIT .
 ```
 
----
-
-## Custom author
+**Specify an author**
 
 ```bash
-addlicense --license MIT --author "Grégoire"
+addlicense --license MIT --author "Acme Corp" .
+```
+
+**Check only — useful in CI**
+
+```bash
+addlicense --check .
+```
+
+Exit 0 if all files have headers. Exit 1 with a list of missing files otherwise.
+
+**Custom template**
+
+```bash
+addlicense --template ./header.txt .
+```
+
+**Ignore paths**
+
+```bash
+addlicense --ignore dist,vendor,*.gen.go .
 ```
 
 ---
 
-## Custom template
+## Flags
 
-```bash
-addlicense --template ./header.txt
-```
+| Flag | Short | Default | Description |
+| :-- | :-- | :-- | :-- |
+| `--license` | `-l` | `MIT` | SPDX license identifier |
+| `--author` | `-a` | — | Copyright holder |
+| `--year` | `-y` | current year | Copyright year |
+| `--template` | `-t` | — | Path to a custom header template |
+| `--ignore` | `-i` | see below | Patterns to skip |
+| `--check` | `-c` | false | Check mode — no writes, exit 1 if missing |
+| `--version` | | | Print version and build info |
 
----
-
-# Supported Languages
-
-- TypeScript
-- JavaScript
-- Go
-- Rust
-- Python
-- Shell
-- Terraform
-- YAML
-- Dockerfile
-- Java
-- C/C++
-- more coming soon
+**Default ignore list:** `vendor`, `node_modules`, `.git`, `dist`, `build`, `*.pb.go`, `*.gen.go`
 
 ---
 
-# Examples
+## Supported languages
 
-## Add headers to a monorepo
+| Extension | Comment style |
+| :-- | :-- |
+| `.go` `.ts` `.tsx` `.js` `.jsx` `.rs` `.swift` `.kt` `.scala` `.php` `.cs` | `//` |
+| `.java` `.c` `.cpp` `.h` | `/* */` |
+| `.py` `.sh` `.bash` `.yaml` `.yml` `.tf` `.toml` `.rb` | `#` |
 
-```bash
-addlicense packages/** src/**
-```
-
----
-
-## Ignore files
-
-```bash
-addlicense . --ignore dist,node_modules
-```
+More languages are added on request — open an issue.
 
 ---
 
-# CI Integration
+## Configuration file
 
-Example GitHub Actions workflow:
+`addlicense` auto-detects a config file in the current directory or the scanned path, in this order:
+
+1. `.addlicenserc.yaml`
+2. `.addlicenserc.yml`
+3. `.addlicenserc.json`
+4. `addlicense.json`
+
+CLI flags always override the config file.
+
+**Example `.addlicenserc.yaml`:**
 
 ```yaml
-name: License Check
+license: Apache-2.0
+author: Acme Corp
+year: 2026
+ignore:
+  - vendor
+  - node_modules
+  - "*.gen.go"
+```
 
-on: [push]
+---
+
+## CI integration
+
+**GitHub Actions — check on every push**
+
+```yaml
+name: License check
+
+on: [push, pull_request]
 
 jobs:
   license:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: docker://ghcr.io/gregoiref/addlicense:latest
+        with:
+          args: --check .
+```
 
-      - run: npm install -g addlicense
+**Or with the binary:**
 
-      - run: addlicense --check .
+```yaml
+      - name: Install addlicense
+        run: |
+          curl -sSL https://github.com/GregoireF/addlicense/releases/latest/download/addlicense_linux_amd64.tar.gz \
+            | tar -xz -C /usr/local/bin addlicense
+
+      - name: Check license headers
+        run: addlicense --check .
 ```
 
 ---
 
-# Philosophy
+## Supported SPDX identifiers
 
-Licensing should be:
-- automatic
-- invisible
-- reproducible
-- enforced by tooling
+Any SPDX identifier works with `--license`. Built-in templates exist for the most common ones:
 
----
+- `MIT`
+- `Apache-2.0`
+- `GPL-3.0-only`
+- `MPL-2.0`
+- `BSD-2-Clause`
+- `BSD-3-Clause`
 
-# Roadmap
-
-- SPDX support
-- SBOM integration
-- provenance metadata
-- autofix mode
-- workspace presets
-- git hooks
-- license compatibility checks
+For anything else, a generic template is used: `Copyright <year> <author>\nSPDX-License-Identifier: <id>`.
 
 ---
 
-# License
+## Design
 
-MIT
+**Why Go**
+
+A license tool runs in CI on every push. Runtime startup matters, dependency installation is noise. Go produces a self-contained binary with no runtime requirement — it installs in one step and runs in milliseconds.
+
+**Idempotence via SPDX detection**
+
+The first pass scans the top 20 lines of each file for `SPDX-License-Identifier:` or any line containing `copyright`. If found, the file is skipped — no re-injection, no drift. This is the approach used by tooling in the SPDX ecosystem and is robust to manual edits.
+
+**Config auto-detection**
+
+No mandatory config file. Zero-config for the common case (`addlicense --license MIT .`), opt-in config for teams that want consistent defaults checked into the repo. Same pattern as Biome, ESLint, and Prettier.
+
+**Template system**
+
+The built-in templates emit SPDX identifiers rather than full license text. This keeps headers minimal and machine-readable — compatible with SBOM tools and license scanners downstream.
+
+**Single binary, Docker, Homebrew**
+
+Three distribution channels cover the three common contexts: local dev (Homebrew), CI without installation (Docker `FROM scratch`), and projects that manage dependencies with Go tooling (`go install`).
+
+---
+
+## Contributing
+
+Issues and PRs are welcome. Please follow [Conventional Commits](https://www.conventionalcommits.org/) — enforced by CI.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).

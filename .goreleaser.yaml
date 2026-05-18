@@ -64,7 +64,7 @@ release:
   draft: false
   prerelease: auto
 
-homebrew:
+brews:
   - name: addlicense
     repository:
       owner: GregoireF

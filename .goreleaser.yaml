@@ -23,10 +23,12 @@ builds:
 archives:
   - id: default
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-    format: tar.gz
+    formats:
+      - tar.gz
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
     files:
       - LICENSE
       - README.md
@@ -62,7 +64,7 @@ release:
   draft: false
   prerelease: auto
 
-brews:
+homebrew:
   - name: addlicense
     repository:
       owner: GregoireF

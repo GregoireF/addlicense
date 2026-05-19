@@ -102,7 +102,7 @@ func TestRenderSQLComment(t *testing.T) {
 }
 
 func TestBuiltinTemplateLicenses(t *testing.T) {
-	licenses := []string{"MIT", "Apache-2.0", "GPL-3.0", "MPL-2.0", "BSD-2-Clause", "BSD-3-Clause", "LGPL-2.1"}
+	licenses := []string{"MIT", "Apache-2.0", "GPL-3.0", "AGPL-3.0", "LGPL-2.1", "LGPL-3.0", "EUPL-1.2", "MPL-2.0", "BSD-2-Clause", "BSD-3-Clause"}
 	for _, l := range licenses {
 		tmpl := header.BuiltinTemplate(l)
 		if tmpl == "" {

@@ -179,11 +179,17 @@ Any SPDX identifier works with `--license`. Built-in templates exist for the mos
 - `MIT`
 - `Apache-2.0`
 - `GPL-3.0-only`
+- `AGPL-3.0-only`
+- `LGPL-2.1-only`
+- `LGPL-3.0-only`
+- `EUPL-1.2` — European Union Public Licence (recommended for EU public sector software)
 - `MPL-2.0`
 - `BSD-2-Clause`
 - `BSD-3-Clause`
 
 For anything else, a generic template is used: `Copyright <year> <author>\nSPDX-License-Identifier: <id>`.
+
+See [ROADMAP.md](ROADMAP.md) for the EU/French compliance context (REUSE spec, CRA) and planned versions.
 
 ---
 

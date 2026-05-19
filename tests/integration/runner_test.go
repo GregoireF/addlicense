@@ -336,6 +336,87 @@ func TestRun_EULicense_AGPL(t *testing.T) {
 	}
 }
 
+// ── REUSE compliance ──────────────────────────────────────────────────────────
+
+func TestRun_Reuse_EmitsSPDXFileCopyrightText(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		"main.go":    "package main\n",
+		"script.sh":  "#!/bin/bash\necho hello\n",
+		"config.yml": "key: value\n",
+	})
+	opts := config.Options{
+		License: "MIT",
+		Author:  "Grégoire",
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Reuse:   true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	cases := map[string][]string{
+		"main.go":    {"// SPDX-FileCopyrightText: 2026 Grégoire", "// SPDX-License-Identifier: MIT"},
+		"script.sh":  {"# SPDX-FileCopyrightText: 2026 Grégoire", "# SPDX-License-Identifier: MIT"},
+		"config.yml": {"# SPDX-FileCopyrightText: 2026 Grégoire", "# SPDX-License-Identifier: MIT"},
+	}
+	for rel, want := range cases {
+		content := readFile(t, filepath.Join(root, rel))
+		for _, line := range want {
+			if !strings.Contains(content, line) {
+				t.Errorf("%s: missing %q\ngot:\n%s", rel, line, content)
+			}
+		}
+	}
+}
+
+func TestRun_Reuse_NoAuthor(t *testing.T) {
+	root := makeProject(t, map[string]string{"main.go": "package main\n"})
+	opts := config.Options{
+		License: "Apache-2.0",
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Reuse:   true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, "main.go"))
+	if !strings.Contains(content, "SPDX-FileCopyrightText: 2026") {
+		t.Errorf("missing SPDX-FileCopyrightText: 2026:\n%s", content)
+	}
+	// plain "Copyright 2026" (the standalone notice) must not appear
+	if strings.Contains(content, "Copyright 2026") {
+		t.Errorf("should not contain plain 'Copyright 2026' in reuse mode:\n%s", content)
+	}
+}
+
+func TestRun_Reuse_Idempotent(t *testing.T) {
+	root := makeProject(t, map[string]string{"main.go": "package main\n"})
+	opts := config.Options{
+		License: "MIT",
+		Author:  "Grégoire",
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Reuse:   true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	first := readFile(t, filepath.Join(root, "main.go"))
+
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	second := readFile(t, filepath.Join(root, "main.go"))
+
+	if first != second {
+		t.Errorf("second reuse run modified the file:\nbefore:\n%s\nafter:\n%s", first, second)
+	}
+}
+
 // ── Multiple roots ────────────────────────────────────────────────────────────
 
 func TestRun_MultipleRoots(t *testing.T) {

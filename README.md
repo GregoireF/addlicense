@@ -74,6 +74,14 @@ Exit 0 if all files have headers. Exit 1 with a list of missing files otherwise.
 addlicense --template ./header.txt .
 ```
 
+**REUSE/FSFE compliance**
+
+```bash
+addlicense --license MIT --reuse .
+```
+
+Emits `SPDX-FileCopyrightText: 2026 Author` instead of `Copyright 2026 Author` — required by the [REUSE specification](https://reuse.software/).
+
 **Ignore paths**
 
 ```bash
@@ -92,6 +100,7 @@ addlicense --ignore dist,vendor,*.gen.go .
 | `--template` | `-t` | — | Path to a custom header template |
 | `--ignore` | `-i` | see below | Patterns to skip |
 | `--check` | `-c` | false | Check mode — no writes, exit 1 if missing |
+| `--reuse` | `-r` | false | REUSE/FSFE mode — emit `SPDX-FileCopyrightText:` instead of `Copyright` |
 | `--version` | | | Print version and build info |
 
 **Default ignore list:** `vendor`, `node_modules`, `.git`, `dist`, `build`, `*.pb.go`, `*.gen.go`

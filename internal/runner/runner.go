@@ -36,11 +36,20 @@ func Run(opts config.Options) error {
 		return err
 	}
 
+	copyrightLine := fmt.Sprintf("Copyright %d", opts.Year)
+	if opts.Reuse {
+		copyrightLine = fmt.Sprintf("SPDX-FileCopyrightText: %d", opts.Year)
+	}
+	if opts.Author != "" {
+		copyrightLine += " " + opts.Author
+	}
+
 	data := header.Data{
-		Year:    opts.Year,
-		Author:  opts.Author,
-		License: opts.License,
-		SPDX:    header.SPDX(opts.License),
+		Year:          opts.Year,
+		Author:        opts.Author,
+		License:       opts.License,
+		SPDX:          header.SPDX(opts.License),
+		CopyrightLine: copyrightLine,
 	}
 
 	var missing []string

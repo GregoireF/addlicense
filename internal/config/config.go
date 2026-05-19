@@ -26,6 +26,7 @@ type Options struct {
 	Year      int
 	Paths     []string
 	CheckOnly bool
+	Reuse     bool // emit SPDX-FileCopyrightText: instead of Copyright
 }
 
 // fileConfig is the shape of .addlicenserc.yaml / .addlicenserc.json.

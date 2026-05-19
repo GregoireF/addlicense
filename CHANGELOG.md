@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `--reuse` / `-r` flag: emits `SPDX-FileCopyrightText: <year> <author>` instead of `Copyright <year> <author>` — [REUSE/FSFE specification](https://reuse.software/) compliance. Idempotence detection already handled (`FileCopyrightText` contains `copyright` as a substring). Choice: opt-in flag rather than default to avoid breaking `grep -r "Copyright"` tooling; making it default requires a major version bump (see [ROADMAP.md](ROADMAP.md)).
+- `CopyrightLine` field added to `header.Data` — pre-formatted copyright string passed to templates; all built-in templates now use `{{.CopyrightLine}}` instead of inline `Copyright {{.Year}} {{.Author}}` conditionals, which removes template duplication and enables REUSE mode without template changes.
 - Built-in templates for EUPL-1.2, AGPL-3.0, LGPL-2.1, LGPL-3.0 — covers European public sector and copyleft licences (see [ROADMAP.md](ROADMAP.md) for EU compliance context)
 - CHANGELOG.md (this file) and ROADMAP.md — EU/French norms context + version planning
 - golangci-lint v2 configuration (`.golangci.yml`): 15 linters beyond the default set — `bodyclose`, `exhaustive`, `goconst`, `gocritic`, `gocyclo`, `godot`, `misspell`, `nestif`, `nilerr`, `prealloc`, `revive`, `unconvert`, `unparam`; `goimports` in `formatters` section (golangci-lint v2 split formatters from linters)

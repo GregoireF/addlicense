@@ -41,6 +41,7 @@ Examples:
 	root.Flags().StringSliceVarP(&opts.Ignore, "ignore", "i", nil, "Comma-separated list of patterns to ignore")
 	root.Flags().IntVarP(&opts.Year, "year", "y", 0, "Copyright year (defaults to current year)")
 	root.Flags().BoolVarP(&opts.CheckOnly, "check", "c", false, "Check headers without modifying files (exit 1 if missing)")
+	root.Flags().BoolVarP(&opts.Reuse, "reuse", "r", false, "Emit SPDX-FileCopyrightText: instead of Copyright (REUSE/FSFE compliance)")
 
 	root.SetVersionTemplate(fmt.Sprintf("addlicense %s\nbuild: %s @ %s\n", version, commit, date))
 

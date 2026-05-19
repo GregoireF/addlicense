@@ -4,6 +4,7 @@
 package header_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -44,9 +45,17 @@ func TestLangFor(t *testing.T) {
 	}
 }
 
+func testData(year int, author string) header.Data {
+	line := fmt.Sprintf("Copyright %d", year)
+	if author != "" {
+		line += " " + author
+	}
+	return header.Data{Year: year, Author: author, License: "MIT", SPDX: "MIT", CopyrightLine: line}
+}
+
 func TestRenderMITLineComment(t *testing.T) {
 	lang := header.LangFor(".go")
-	data := header.Data{Year: 2026, Author: "Grégoire", License: "MIT", SPDX: "MIT"}
+	data := testData(2026, "Grégoire")
 
 	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
 	if err != nil {
@@ -61,9 +70,31 @@ func TestRenderMITLineComment(t *testing.T) {
 	}
 }
 
+func TestRenderReuseLineComment(t *testing.T) {
+	lang := header.LangFor(".go")
+	data := header.Data{
+		Year:          2026,
+		Author:        "Grégoire",
+		License:       "MIT",
+		SPDX:          "MIT",
+		CopyrightLine: "SPDX-FileCopyrightText: 2026 Grégoire",
+	}
+
+	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	if !strings.Contains(got, "// SPDX-FileCopyrightText: 2026 Grégoire") {
+		t.Errorf("missing REUSE copyright line, got:\n%s", got)
+	}
+	if !strings.Contains(got, "// SPDX-License-Identifier: MIT") {
+		t.Errorf("missing SPDX line, got:\n%s", got)
+	}
+}
+
 func TestRenderBlockComment(t *testing.T) {
 	lang := header.LangFor(".java")
-	data := header.Data{Year: 2026, Author: "Grégoire", License: "MIT", SPDX: "MIT"}
+	data := testData(2026, "Grégoire")
 
 	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
 	if err != nil {
@@ -77,7 +108,7 @@ func TestRenderBlockComment(t *testing.T) {
 
 func TestRenderHTMLComment(t *testing.T) {
 	lang := header.LangFor(".html")
-	data := header.Data{Year: 2026, Author: "Grégoire", License: "MIT", SPDX: "MIT"}
+	data := testData(2026, "Grégoire")
 
 	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
 	if err != nil {
@@ -90,7 +121,7 @@ func TestRenderHTMLComment(t *testing.T) {
 
 func TestRenderSQLComment(t *testing.T) {
 	lang := header.LangFor(".sql")
-	data := header.Data{Year: 2026, Author: "Grégoire", License: "MIT", SPDX: "MIT"}
+	data := testData(2026, "Grégoire")
 
 	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
 	if err != nil {

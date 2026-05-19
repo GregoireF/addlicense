@@ -72,10 +72,11 @@ func LangFor(ext string) *Lang {
 
 // Data is passed to header templates.
 type Data struct {
-	Year    int
-	Author  string
-	License string
-	SPDX    string
+	Year          int
+	Author        string
+	License       string
+	SPDX          string
+	CopyrightLine string // pre-formatted: "Copyright 2026 Author" or "SPDX-FileCopyrightText: 2026 Author"
 }
 
 // Render builds the comment block for the given template text and data.
@@ -135,26 +136,26 @@ func SPDX(license string) string {
 func BuiltinTemplate(license string) string {
 	switch strings.ToUpper(license) {
 	case "MIT":
-		return "Copyright {{.Year}}{{if .Author}} {{.Author}}{{end}}\nSPDX-License-Identifier: MIT"
+		return "{{.CopyrightLine}}\nSPDX-License-Identifier: MIT"
 	case "APACHE-2.0", "APACHE":
-		return "Copyright {{.Year}}{{if .Author}} {{.Author}}{{end}}\nSPDX-License-Identifier: Apache-2.0"
+		return "{{.CopyrightLine}}\nSPDX-License-Identifier: Apache-2.0"
 	case "GPL-3.0", "GPL-3.0-ONLY", "GPL":
-		return "Copyright {{.Year}}{{if .Author}} {{.Author}}{{end}}\nSPDX-License-Identifier: GPL-3.0-only"
+		return "{{.CopyrightLine}}\nSPDX-License-Identifier: GPL-3.0-only"
 	case "AGPL-3.0", "AGPL-3.0-ONLY", "AGPL":
-		return "Copyright {{.Year}}{{if .Author}} {{.Author}}{{end}}\nSPDX-License-Identifier: AGPL-3.0-only"
+		return "{{.CopyrightLine}}\nSPDX-License-Identifier: AGPL-3.0-only"
 	case "LGPL-2.1", "LGPL-2.1-ONLY":
-		return "Copyright {{.Year}}{{if .Author}} {{.Author}}{{end}}\nSPDX-License-Identifier: LGPL-2.1-only"
+		return "{{.CopyrightLine}}\nSPDX-License-Identifier: LGPL-2.1-only"
 	case "LGPL-3.0", "LGPL-3.0-ONLY", "LGPL":
-		return "Copyright {{.Year}}{{if .Author}} {{.Author}}{{end}}\nSPDX-License-Identifier: LGPL-3.0-only"
+		return "{{.CopyrightLine}}\nSPDX-License-Identifier: LGPL-3.0-only"
 	case "EUPL-1.2", "EUPL":
-		return "Copyright {{.Year}}{{if .Author}} {{.Author}}{{end}}\nSPDX-License-Identifier: EUPL-1.2"
+		return "{{.CopyrightLine}}\nSPDX-License-Identifier: EUPL-1.2"
 	case "MPL-2.0", "MPL":
-		return "Copyright {{.Year}}{{if .Author}} {{.Author}}{{end}}\nSPDX-License-Identifier: MPL-2.0"
+		return "{{.CopyrightLine}}\nSPDX-License-Identifier: MPL-2.0"
 	case "BSD-2-CLAUSE", "BSD2":
-		return "Copyright {{.Year}}{{if .Author}} {{.Author}}{{end}}\nSPDX-License-Identifier: BSD-2-Clause"
+		return "{{.CopyrightLine}}\nSPDX-License-Identifier: BSD-2-Clause"
 	case "BSD-3-CLAUSE", "BSD3", "BSD":
-		return "Copyright {{.Year}}{{if .Author}} {{.Author}}{{end}}\nSPDX-License-Identifier: BSD-3-Clause"
+		return "{{.CopyrightLine}}\nSPDX-License-Identifier: BSD-3-Clause"
 	default:
-		return "Copyright {{.Year}}{{if .Author}} {{.Author}}{{end}}\nSPDX-License-Identifier: {{.SPDX}}"
+		return "{{.CopyrightLine}}\nSPDX-License-Identifier: {{.SPDX}}"
 	}
 }

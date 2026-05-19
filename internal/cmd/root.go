@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewRootCmd builds the root Cobra command wired up with all flags and version info.
 func NewRootCmd(version, commit, date string) *cobra.Command {
 	var opts config.Options
 

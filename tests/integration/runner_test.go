@@ -189,7 +189,7 @@ func TestRun_IgnoresVendorAndNodeModules(t *testing.T) {
 
 func TestRun_SkipsUnsupportedExtensions(t *testing.T) {
 	root := makeProject(t, map[string]string{
-		"main.go":  "package main\n",
+		"main.go":   "package main\n",
 		"README.md": "# hello\n",
 		"data.json": "{}\n",
 	})

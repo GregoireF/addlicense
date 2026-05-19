@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/grego/Desktop/Projects/personnal/GregoireF/**)",
+      "Read(//c/Users/grego/Desktop/Projects/personnal/iac/**)",
+      "PowerShell(Get-Command tofu -ErrorAction SilentlyContinue; Get-Command opentofu -ErrorAction SilentlyContinue; Get-Command terraform -ErrorAction SilentlyContinue; \\(Get-Content \"c:\\\\Users\\\\grego\\\\Desktop\\\\Projects\\\\personnal\\\\iac\\\\.mise.toml\"\\))",
+      "PowerShell(Get-Command tenv -ErrorAction SilentlyContinue; where.exe tenv 2>$null; where.exe tofu 2>$null; ls \"$env:USERPROFILE\\\\.local\\\\bin\" -ErrorAction SilentlyContinue | Select-Object Name)",
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\" -Recurse -Filter \"tofu.exe\" -Depth 5 -ErrorAction SilentlyContinue | Select-Object FullName)",
+      "Read(//c//**)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\grego\\Desktop\\Projects\\personnal\\iac\\terraform\\github"
+    ]
+  }
+}

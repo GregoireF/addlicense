@@ -16,13 +16,13 @@ func makeTree(t *testing.T) string {
 	root := t.TempDir()
 
 	files := map[string]string{
-		"main.go":              "package main",
-		"cmd/cli.go":           "package cmd",
-		"node_modules/lib.js":  "module.exports = {}",
-		"vendor/pkg/pkg.go":    "package pkg",
-		"script.sh":            "#!/bin/bash",
-		"README.md":            "# hello",
-		"config.yaml":          "key: value",
+		"main.go":             "package main",
+		"cmd/cli.go":          "package cmd",
+		"node_modules/lib.js": "module.exports = {}",
+		"vendor/pkg/pkg.go":   "package pkg",
+		"script.sh":           "#!/bin/bash",
+		"README.md":           "# hello",
+		"config.yaml":         "key: value",
 	}
 
 	for rel, content := range files {

@@ -96,28 +96,34 @@ func Render(tmplText string, data Data, lang Lang) (string, error) {
 func wrapComment(text string, lang Lang) string {
 	lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
 	var b strings.Builder
-
 	if lang.LineComment != "" {
-		for _, l := range lines {
-			if l == "" {
-				fmt.Fprintf(&b, "%s\n", lang.LineComment)
-			} else {
-				fmt.Fprintf(&b, "%s %s\n", lang.LineComment, l)
-			}
-		}
+		writeLineComment(&b, lines, lang.LineComment)
 	} else {
-		fmt.Fprintf(&b, "%s\n", lang.BlockOpen)
-		for _, l := range lines {
-			if l == "" {
-				fmt.Fprintf(&b, "%s\n", strings.TrimRight(lang.BlockPrefix, " "))
-			} else {
-				fmt.Fprintf(&b, "%s%s\n", lang.BlockPrefix, l)
-			}
-		}
-		fmt.Fprintf(&b, "%s\n", lang.BlockClose)
+		writeBlockComment(&b, lines, lang)
 	}
-
 	return b.String()
+}
+
+func writeLineComment(b *strings.Builder, lines []string, prefix string) {
+	for _, l := range lines {
+		if l == "" {
+			fmt.Fprintf(b, "%s\n", prefix)
+		} else {
+			fmt.Fprintf(b, "%s %s\n", prefix, l)
+		}
+	}
+}
+
+func writeBlockComment(b *strings.Builder, lines []string, lang Lang) {
+	fmt.Fprintf(b, "%s\n", lang.BlockOpen)
+	for _, l := range lines {
+		if l == "" {
+			fmt.Fprintf(b, "%s\n", strings.TrimRight(lang.BlockPrefix, " "))
+		} else {
+			fmt.Fprintf(b, "%s%s\n", lang.BlockPrefix, l)
+		}
+	}
+	fmt.Fprintf(b, "%s\n", lang.BlockClose)
 }
 
 // SPDX returns the canonical SPDX expression for a license identifier.

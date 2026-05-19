@@ -27,7 +27,7 @@ linters:
       scope: declarations
     goconst:
       min-len: 3
-      min-occurrences: 3
+      min-occurrences: 5
     revive:
       rules:
         - name: exported

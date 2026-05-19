@@ -128,7 +128,9 @@ func TestWalk_SkipsNoExtension(t *testing.T) {
 	}
 }
 
-func TestWalk_SkipsMarkdownAndJSON(t *testing.T) {
+func TestWalk_CollectsMarkdownAndJSON(t *testing.T) {
+	// The scanner is language-agnostic: it collects ALL files with extensions.
+	// Filtering by supported language is the runner's responsibility, not the scanner's.
 	root := makeTree(t)
 	files, err := scanner.Walk([]string{root}, []string{"node_modules", "vendor"})
 	if err != nil {
@@ -140,10 +142,9 @@ func TestWalk_SkipsMarkdownAndJSON(t *testing.T) {
 		exts[f.Ext] = true
 	}
 
-	for _, unwanted := range []string{".md", ".json"} {
-		if exts[unwanted] {
-			t.Errorf("extension %s should not be collected (no comment style)", unwanted)
-		}
+	// .md is in the tree (README.md) — scanner should return it.
+	if !exts[".md"] {
+		t.Error("scanner should collect .md files (language filtering happens in runner)")
 	}
 }
 

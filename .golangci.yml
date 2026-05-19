@@ -45,9 +45,10 @@ linters:
         - name: redefines-builtin-id
 
 issues:
-  exclude-rules:
-    - path: "_test\\.go"
-      linters:
-        - gocritic
-        - unparam
-        - goconst
+  exclusions:
+    rules:
+      - path: "_test\\.go"
+        linters:
+          - gocritic
+          - unparam
+          - goconst

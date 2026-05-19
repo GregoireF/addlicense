@@ -8,9 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Built-in templates for EUPL-1.2, AGPL-3.0, LGPL-2.1, LGPL-3.0 — covers European public sector licences and common copyleft variants
-- CHANGELOG.md (this file)
-- ROADMAP.md — EU/French norms context + version planning
+- Built-in templates for EUPL-1.2, AGPL-3.0, LGPL-2.1, LGPL-3.0 — covers European public sector and copyleft licences (see [ROADMAP.md](ROADMAP.md) for EU compliance context)
+- CHANGELOG.md (this file) and ROADMAP.md — EU/French norms context + version planning
+- golangci-lint v2 configuration (`.golangci.yml`): 15 linters beyond the default set — `bodyclose`, `exhaustive`, `goconst`, `gocritic`, `gocyclo`, `godot`, `misspell`, `nestif`, `nilerr`, `prealloc`, `revive`, `unconvert`, `unparam`; `goimports` in `formatters` section (golangci-lint v2 split formatters from linters)
+- Codecov configuration (`.codecov.yml`): 90% coverage threshold enforced on both project and patch; structured comment layout
+- Extended test suite — coverage raised to 90%+:
+  - `internal/scanner`: 4 new unit tests — glob ignore patterns, invalid root, no-extension files, markdown/JSON collection
+  - `internal/injector`: 5 new unit tests — file-not-found paths, empty file, scan window boundary, case-insensitive detection
+  - `internal/config`: 11 new unit tests — `Load` priority rules, YAML/YML/JSON auto-detection, CLI flag override, invalid YAML error path
+  - `tests/integration/`: integration tests moved from `internal/runner/` to a dedicated package; 8 additional scenarios covering block/HTML/SQL comment styles, EU licences, multiple roots, custom templates
+- `CONTRIBUTING.md` — development setup, test commands, commit and PR conventions
+
+### Changed
+- GoReleaser v2: `brews:` key (removed in v2.10) replaced by `homebrew_casks:` — Homebrew tap formula moves from `Formula/` to `Casks/` on next release
+- CI test command now uses `-coverpkg=./...` for cross-package coverage attribution — integration tests in `tests/integration/` correctly attribute coverage to `internal/` packages
+- Test organisation: runner integration tests promoted to `tests/integration/` package (`package integration_test`) following Go conventions — unit tests (`_test.go`) stay alongside source, integration tests get their own top-level directory
+
+### Fixed
+- `internal/header/header.go`: `Lang` struct alignment and `langs` map formatting brought into strict gofmt compliance — gofmt aligns map values per comment-separated group (comments reset the tabwriter), not globally
 
 ---
 

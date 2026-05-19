@@ -12,10 +12,10 @@ import (
 
 // Lang describes how to wrap a comment block for a given file type.
 type Lang struct {
-	LineComment  string // e.g. "//"
-	BlockOpen    string // e.g. "/*"
-	BlockClose   string // e.g. " */"
-	BlockPrefix  string // e.g. " * "
+	LineComment string // e.g. "//"
+	BlockOpen   string // e.g. "/*"
+	BlockClose  string // e.g. " */"
+	BlockPrefix string // e.g. " * "
 }
 
 var htmlComment = Lang{BlockOpen: "<!--", BlockClose: "-->", BlockPrefix: ""}

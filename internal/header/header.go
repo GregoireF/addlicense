@@ -23,20 +23,20 @@ var cBlock = Lang{BlockOpen: "/*", BlockClose: " */", BlockPrefix: " * "}
 
 var langs = map[string]Lang{
 	// Go / systems
-	".go":     {LineComment: "//"},
-	".rs":     {LineComment: "//"},
-	".c":      cBlock,
-	".cpp":    cBlock,
-	".h":      cBlock,
+	".go":  {LineComment: "//"},
+	".rs":  {LineComment: "//"},
+	".c":   cBlock,
+	".cpp": cBlock,
+	".h":   cBlock,
 	// JVM
-	".java":   cBlock,
-	".kt":     {LineComment: "//"},
-	".scala":  {LineComment: "//"},
+	".java":  cBlock,
+	".kt":    {LineComment: "//"},
+	".scala": {LineComment: "//"},
 	// Web — scripts
-	".ts":     {LineComment: "//"},
-	".tsx":    {LineComment: "//"},
-	".js":     {LineComment: "//"},
-	".jsx":    {LineComment: "//"},
+	".ts":  {LineComment: "//"},
+	".tsx": {LineComment: "//"},
+	".js":  {LineComment: "//"},
+	".jsx": {LineComment: "//"},
 	// Web — markup / styles
 	".html":   htmlComment,
 	".vue":    htmlComment,
@@ -44,21 +44,21 @@ var langs = map[string]Lang{
 	".css":    cBlock,
 	".scss":   cBlock,
 	// Mobile / cloud
-	".swift":  {LineComment: "//"},
-	".php":    {LineComment: "//"},
-	".cs":     {LineComment: "//"},
-	".proto":  {LineComment: "//"},
+	".swift": {LineComment: "//"},
+	".php":   {LineComment: "//"},
+	".cs":    {LineComment: "//"},
+	".proto": {LineComment: "//"},
 	// Infra / config
-	".py":     {LineComment: "#"},
-	".sh":     {LineComment: "#"},
-	".bash":   {LineComment: "#"},
-	".yaml":   {LineComment: "#"},
-	".yml":    {LineComment: "#"},
-	".tf":     {LineComment: "#"},
-	".toml":   {LineComment: "#"},
-	".rb":     {LineComment: "#"},
+	".py":   {LineComment: "#"},
+	".sh":   {LineComment: "#"},
+	".bash": {LineComment: "#"},
+	".yaml": {LineComment: "#"},
+	".yml":  {LineComment: "#"},
+	".tf":   {LineComment: "#"},
+	".toml": {LineComment: "#"},
+	".rb":   {LineComment: "#"},
 	// Data
-	".sql":    {LineComment: "--"},
+	".sql": {LineComment: "--"},
 }
 
 // LangFor returns the comment style for ext (e.g. ".go"), or nil if unsupported.

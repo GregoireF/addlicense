@@ -6,6 +6,7 @@ package injector_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/GregoireF/addlicense/internal/injector"
@@ -104,6 +105,66 @@ func TestInject_PreservesShebang(t *testing.T) {
 	if !contains(content, header) {
 		t.Errorf("header not found after shebang:\n%s", content)
 	}
+}
+
+func TestHasHeader_FileNotFound(t *testing.T) {
+	_, err := injector.HasHeader(nonexistentPath(t))
+	if err == nil {
+		t.Error("expected error for nonexistent file, got nil")
+	}
+}
+
+func TestInject_FileNotFound(t *testing.T) {
+	err := injector.Inject(nonexistentPath(t), "// header\n")
+	if err == nil {
+		t.Error("expected error for nonexistent file, got nil")
+	}
+}
+
+func TestHasHeader_EmptyFile(t *testing.T) {
+	path := writeTemp(t, "")
+	has, err := injector.HasHeader(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if has {
+		t.Error("empty file should have no header")
+	}
+}
+
+func TestHasHeader_HeaderBeyondScanWindow(t *testing.T) {
+	// Copyright notice past line 20 must NOT be detected — we only scan the top 20 lines.
+	var b strings.Builder
+	for i := 0; i < 21; i++ {
+		b.WriteString("// line\n")
+	}
+	b.WriteString("// Copyright 2026 Someone\n")
+
+	path := writeTemp(t, b.String())
+	has, err := injector.HasHeader(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if has {
+		t.Error("copyright beyond scan window should not be detected")
+	}
+}
+
+func TestHasHeader_CaseInsensitive(t *testing.T) {
+	path := writeTemp(t, "// COPYRIGHT 2026 SOMEONE\npackage main\n")
+	has, err := injector.HasHeader(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !has {
+		t.Error("detection should be case-insensitive")
+	}
+}
+
+// nonexistentPath returns a path guaranteed not to exist.
+func nonexistentPath(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(t.TempDir(), "does_not_exist_12345.go")
 }
 
 func contains(s, sub string) bool {

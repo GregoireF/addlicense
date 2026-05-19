@@ -33,7 +33,7 @@ jobs:
         run: go vet ./...
 
       - name: Test
-        run: go test -race -coverprofile=coverage.out ./...
+        run: go test -race -coverprofile=coverage.out -coverpkg=./... ./...
 
       - name: Build
         run: go build ./cmd/addlicense
@@ -41,7 +41,7 @@ jobs:
       - uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           files: coverage.out
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
   lint:
     name: Lint
@@ -60,4 +60,4 @@ jobs:
 
       - uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:
-          version: latest
+          version: v2.1.6

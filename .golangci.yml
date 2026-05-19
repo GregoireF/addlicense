@@ -1,0 +1,53 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - exhaustive
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - goimports
+    - misspell
+    - nestif
+    - nilerr
+    - prealloc
+    - revive
+    - unconvert
+    - unparam
+
+  settings:
+    gocyclo:
+      min-complexity: 15
+    godot:
+      scope: declarations
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+        - name: var-naming
+        - name: receiver-naming
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: redefines-builtin-id
+
+issues:
+  exclude-rules:
+    - path: "_test\\.go"
+      linters:
+        - gocritic
+        - unparam
+        - goconst

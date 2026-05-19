@@ -12,10 +12,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// DefaultIgnore is the set of paths excluded when no --ignore flag is provided.
 var DefaultIgnore = []string{
 	"vendor", "node_modules", ".git", "dist", "build", "*.pb.go", "*.gen.go",
 }
 
+// Options holds the resolved configuration for a single addlicense run.
 type Options struct {
 	License   string
 	Author    string
@@ -77,6 +79,7 @@ func merge(opts *Options, fc *fileConfig) {
 	}
 }
 
+// Normalize fills in zero-value fields with their defaults.
 func (o *Options) Normalize() {
 	if o.Year == 0 {
 		o.Year = time.Now().Year()

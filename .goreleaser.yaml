@@ -64,7 +64,7 @@ release:
   draft: false
   prerelease: auto
 
-brews:
+homebrew_casks:
   - name: addlicense
     repository:
       owner: GregoireF
@@ -76,5 +76,3 @@ brews:
     homepage: "https://github.com/GregoireF/addlicense"
     description: "Fast, minimal license header manager for monorepos and CI pipelines."
     license: "MIT"
-    test: |
-      system "#{bin}/addlicense", "--version"

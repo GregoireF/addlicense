@@ -12,7 +12,6 @@ linters:
     - gocritic
     - gocyclo
     - godot
-    - goimports
     - misspell
     - nestif
     - nilerr
@@ -44,3 +43,6 @@ linters:
         - name: context-keys-type
         - name: redefines-builtin-id
 
+formatters:
+  enable:
+    - goimports

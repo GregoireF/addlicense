@@ -44,11 +44,3 @@ linters:
         - name: context-keys-type
         - name: redefines-builtin-id
 
-issues:
-  exclusions:
-    rules:
-      - path: "_test\\.go"
-        linters:
-          - gocritic
-          - unparam
-          - goconst

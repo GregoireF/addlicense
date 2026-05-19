@@ -151,14 +151,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: docker://ghcr.io/gregoiref/addlicense:latest
-        with:
-          args: --check .
-```
 
-**Or with the binary:**
-
-```yaml
       - name: Install addlicense
         run: |
           curl -sSL https://github.com/GregoireF/addlicense/releases/latest/download/addlicense_linux_amd64.tar.gz \
@@ -166,6 +159,15 @@ jobs:
 
       - name: Check license headers
         run: addlicense --check .
+```
+
+**With Docker (no install needed):**
+
+```yaml
+      - name: Check license headers
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src \
+            ghcr.io/gregoiref/addlicense:latest --check .
 ```
 
 ---

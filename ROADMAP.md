@@ -57,88 +57,18 @@ EU licence templates (EUPL-1.2, AGPL-3.0-only, LGPL-2.1/3.0-only). `--reuse` fla
 ### v0.4.0 — 2026-05-20
 Header removal and power-user flags. `--remove` / `-R` strips existing headers; `--update` / `-u` replaces them in one pass. `--dry-run` / `-n` previews without writing. `--verbose` / `-v` and `--quiet` / `-q` control output verbosity. `--format json` emits JSON Lines for machine consumption. Parallel worker pool (`--workers`). `reuse:` field in `.addlicenserc.yaml`. Official `.pre-commit-hooks.yaml` (`addlicense-check` + `addlicense-add`). Mutual-exclusion validation for conflicting flags. Coverage raised to 90.2%.
 
+### v0.5.0 — 2026-05-20
+Ecosystem integrations. `--year-range` preserves the original copyright year during `--update`, emitting `YYYY-YYYY` ranges (opt-in, backward-compatible, composable with `--reuse`). `--dep5` generates a REUSE-compliant `.reuse/dep5` bulk-licence declaration for files that cannot carry inline headers (images, fonts, binaries). Native GitHub Action (`action.yml`) — composite action with OS/arch detection, binary downloaded from the GitHub Release tag, zero external services, `ubuntu-*` / `macos-*` / `windows-*` × amd64 + arm64.
+
 ---
 
 ## Planned versions
 
 ---
 
-### v0.5.0 — Ecosystem integrations
-
-**Target:** next minor release. Focuses on reducing friction at the developer workstation and CI layer.
-
-#### Native GitHub Action
-
-**What:** Ship `action.yml` so users can reference `uses: GregoireF/addlicense@v0.5.0` directly in their workflows without a separate binary download or Docker pull.
-
-**Justification:**
-- GitHub's [official guidance](https://docs.github.com/en/actions/sharing-automations/creating-actions/about-custom-actions) distinguishes three action types: JavaScript, Docker container, and composite. A composite action that calls the pre-built binary combines the reliability of a compiled binary with zero external downloads.
-- Reference implementations: [golangci-lint-action](https://github.com/golangci/golangci-lint-action) ships the linter binary inside the action and achieves ~3 s cold start vs ~10–15 s for a `curl | tar` install. [shfmt-action](https://github.com/mfinelli/setup-shfmt) follows the same pattern.
-- The binary already targets linux/amd64 and linux/arm64 (the two GitHub-hosted runner architectures). GoReleaser can attach the binaries to the `action.yml` repository via a post-release workflow.
-
-**Pros:**
-- No external HTTP request in CI — binary shipped inside the action, fully offline-capable.
-- Single line of YAML for the end user: `uses: GregoireF/addlicense@v0.5.0`.
-- Version pinning is inherited from the `@v0.5.0` action tag, not a separate download URL.
-
-**Cons:**
-- Requires a post-release step to commit the binary into the action repo (or the main repo). Adds ~30 s to the release pipeline.
-- Action repo and release repo must stay in sync; a failed release step leaves them divergent.
-- macOS and Windows runners would need a different binary — the action would need a `runs.using: composite` with OS-conditional steps.
-
-**Decision:** Implement as a composite action using `runs.using: composite` with `${{ runner.os }}` detection. Binaries are downloaded from the GitHub Release (already published) rather than committed — avoids repository bloat while still using the action tag for version pinning.
-
----
-
-#### `--year-range` flag
-
-**What:** When updating a file that already has a header from a previous year, emit `Copyright 2023–2026 Author` instead of overwriting with `Copyright 2026 Author`.
-
-**Justification:**
-- The [SPDX specification §11.3](https://spdx.github.io/spdx-spec/v2.3/file-information/) allows year ranges in `FileCopyrightText` fields. The Linux kernel, LLVM, GCC, and most long-lived FOSS projects use year ranges in headers.
-- Without this, `--update` on a multi-year project silently discards the original year — a legal regression for projects in jurisdictions where publication date affects copyright duration (e.g. EU author's rights under [Directive 2001/29/EC](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=celex%3A32001L0029), Art. 5).
-- The [REUSE FAQ](https://reuse.software/faq/) explicitly recommends year ranges: "For a work that spans several years, you can list them all".
-
-**Pros:**
-- Preserves the full copyright timeline, which matters legally and historically.
-- Composable with `--update`: `addlicense --update --year-range .`
-- No breaking change: opt-in flag, existing behaviour unchanged.
-
-**Cons:**
-- Requires parsing the existing header to extract the original year (a read pass before the inject pass). Increases the per-file syscall count from 1 to 2 for files that already have a header.
-- Edge cases: year ranges with gaps (`2021, 2023–2026`), ranges already in the header, corrupted dates. Parsing heuristics can fail on non-standard headers.
-- Does not integrate cleanly with REUSE `dep5` bulk declarations, which have their own date syntax.
-
-**Decision:** Implement with a conservative regex (`Copyright (20\d{2})`) that extracts the first year. Emit `YYYY–<current>` only when original year < current year. If parsing fails, fall back to single year with a warning.
-
----
-
-#### `.reuse/dep5` stub generation
-
-**What:** For files that cannot carry inline headers (images, fonts, compiled binaries, generated files), emit a [REUSE-compliant `dep5`](https://reuse.software/spec/#dep5) bulk-licence declaration at `.reuse/dep5`.
-
-**Justification:**
-- The [REUSE specification 3.3](https://reuse.software/spec/) §4.3 requires that _every_ file in a repository be covered by a licence — including non-source assets. Inline headers are impossible for binary assets. The only REUSE-compliant solution is a `.reuse/dep5` file.
-- The [FSFE's `reuse` tool](https://github.com/fsfe/reuse-tool) generates `dep5` stubs but is a separate Python dependency. addlicense users who want REUSE compliance without adding a Python toolchain need a Go-native solution.
-- European public sector projects increasingly require REUSE compliance as a condition of OSS procurement ([OpenChain ISO/IEC 5230](https://openchainproject.org/featured/2020/12/17/iso-5230)), and `dep5` coverage is a blocking check for `reuse lint`.
-
-**Pros:**
-- Closes the last gap between addlicense and full REUSE compliance.
-- Pure Go — no additional runtime dependencies.
-- Integrates naturally with the existing `scanner.Walk` output: files without an inline header and without a `dep5` entry are the `--check` failures.
-
-**Cons:**
-- `dep5` format is a subset of Debian's [`Machine-readable debian/copyright`](https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/) specification. Parsing and generating it correctly requires careful handling of glob patterns, paragraph delimiters, and multi-paragraph files.
-- The feature adds a new output artefact (`.reuse/dep5`) that is outside the header-per-file model addlicense is built around. This expands the scope boundary.
-- Most users wanting `dep5` already use the dedicated `reuse` CLI. Duplicating its functionality risks incomplete coverage and maintenance burden.
-
-**Decision:** Implement as a separate `--dep5` flag (not the default). The flag emits a minimal `dep5` covering only unhandled file types (images, fonts, binaries). The `reuse lint` exit code is the acceptance test.
-
----
-
 ### v0.6.0 — Multi-author and organisation workflows
 
-**Target:** second minor release after v0.5.0. Focuses on team and enterprise use cases.
+**Target:** next minor release after v0.5.0. Focuses on team and enterprise use cases.
 
 #### Multi-author copyright lines
 

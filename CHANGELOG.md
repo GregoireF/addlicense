@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] — 2026-05-20
+
+### Added
+
+- **`--year-range` flag** — when combined with `--update`, reads the original copyright year from the existing header and emits `YYYY-YYYY` (e.g. `Copyright 2023-2026 Author`) instead of overwriting with the current year alone. Falls back silently to a single year when the original year cannot be extracted or equals the current year. Works with `--reuse` (emits `SPDX-FileCopyrightText: 2023-2026 Author`).
+- **`--dep5` flag** — generates a REUSE-compliant `.reuse/dep5` bulk-licence declaration for files that cannot carry inline SPDX headers (images, fonts, binaries, and any other extension not in the language map). The dep5 root defaults to the first path argument. Supports `--dry-run` (prints `[dry-run] would-write: .reuse/dep5`).
+- **Native GitHub Action (`action.yml`)** — composite action using `runner.os` and `runner.arch` detection to download the correct binary from the GitHub Release tag, add it to `$GITHUB_PATH`, and run addlicense. Supports `ubuntu-*`, `macos-*`, and `windows-*` runners on amd64 + arm64. Usage: `uses: GregoireF/addlicense@v0.5.0` with optional `args` input (default: `--check .`).
+- **`internal/dep5` package** — pure Go dep5 document generator; `Build(paths, year, author, license)` returns the formatted dep5 content.
+- **Extended test suite**:
+  - `internal/injector`: 5 new unit tests for `ExtractYear` — copyright, SPDX-FileCopyrightText, no year, file not found, beyond scan window.
+  - `internal/dep5`: 5 unit tests — with paths, empty paths (header-only), no author, multiple paths (continuation lines), forward-slash path normalisation.
+  - `tests/integration/`: 7 new tests — `--year-range` (original preserved, same year, no header, with REUSE); `--dep5` (creates file, no unhandled files, dry-run).
+
+---
+
 ## [0.4.0] — 2026-05-20
 
 ### Added

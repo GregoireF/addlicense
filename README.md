@@ -93,6 +93,7 @@ addlicense --ignore "dist,vendor,*.gen.go" .
 | `--format` | `-f` | `text` | Output format: `text` or `json` (JSON Lines) |
 | `--workers` | | `NumCPU` | Parallel goroutines for file processing |
 | `--reuse` | `-r` | `false` | [REUSE/FSFE](https://reuse.software/) mode — emit `SPDX-FileCopyrightText:` |
+| `--year-range` | | `false` | Preserve original copyright year on `--update` — emits `YYYY-YYYY` range |
 | `--version` | | | Print version and build info |
 
 **Mutually exclusive:** `--verbose`/`--quiet` · `--check`/`--remove` · `--check`/`--update` · `--remove`/`--update`
@@ -145,17 +146,15 @@ ignore:
 
 ## CI integration
 
-**GitHub Actions**
+**GitHub Action** (since v0.5.0 — recommended)
 
 ```yaml
-- name: Install addlicense
-  run: |
-    curl -sSL https://github.com/GregoireF/addlicense/releases/latest/download/addlicense_linux_amd64.tar.gz \
-      | tar -xz -C /usr/local/bin addlicense
-
-- name: Check license headers
-  run: addlicense --check .
+- uses: GregoireF/addlicense@v0.5.0
+  with:
+    args: --check .
 ```
+
+Works on Linux, macOS, and Windows runners (amd64 + arm64). See [Wiki: CI Integration](../../wiki/CI-Integration) for advanced examples.
 
 **pre-commit** (since v0.4.0 — binary installed automatically)
 
@@ -176,7 +175,7 @@ repos:
       ghcr.io/gregoiref/addlicense:latest --check .
 ```
 
-More examples (GitLab CI, pre-commit, Makefile, JSON output) → [Wiki: CI Integration](../../wiki/CI-Integration).
+More examples (GitLab CI, curl install, Makefile, JSON output) → [Wiki: CI Integration](../../wiki/CI-Integration).
 
 ---
 

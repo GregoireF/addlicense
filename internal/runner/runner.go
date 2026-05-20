@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/GregoireF/addlicense/internal/config"
+	"github.com/GregoireF/addlicense/internal/dep5"
 	"github.com/GregoireF/addlicense/internal/header"
 	"github.com/GregoireF/addlicense/internal/injector"
 	"github.com/GregoireF/addlicense/internal/scanner"
@@ -80,6 +81,12 @@ func Run(opts config.Options) error {
 		License:       opts.License,
 		SPDX:          header.SPDX(opts.License),
 		CopyrightLine: buildCopyrightLine(0, opts.Year, opts.Author, opts.Reuse),
+	}
+
+	if opts.Dep5 {
+		if err := writeDep5(files, opts, cwd); err != nil {
+			return err
+		}
 	}
 
 	results := runParallel(files, opts, hData, tmplText, cwd)
@@ -308,6 +315,42 @@ func emit(r fileResult, useJSON bool, enc *json.Encoder, verbose, quiet bool) {
 			fmt.Printf("  %s (%s)\n", r.Path, r.Action)
 		}
 	}
+}
+
+func writeDep5(files []scanner.File, opts config.Options, cwd string) error {
+	// Root for dep5: first scan path when unambiguous, otherwise CWD.
+	dep5Root := cwd
+	if len(opts.Paths) == 1 {
+		if abs, err := filepath.Abs(opts.Paths[0]); err == nil {
+			dep5Root = abs
+		}
+	}
+
+	var unhandled []string
+	for _, f := range files {
+		if header.LangFor(f.Ext) != nil {
+			continue
+		}
+		rel, err := filepath.Rel(dep5Root, f.Path)
+		if err != nil {
+			rel = f.Path
+		}
+		unhandled = append(unhandled, filepath.ToSlash(rel))
+	}
+
+	if opts.DryRun {
+		if !opts.Quiet {
+			fmt.Printf("[dry-run] would-write: .reuse/dep5 (%d unhandled file(s))\n", len(unhandled))
+		}
+		return nil
+	}
+
+	content := dep5.Build(unhandled, opts.Year, opts.Author, opts.License)
+	dir := filepath.Join(dep5Root, ".reuse")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("creating .reuse directory: %w", err)
+	}
+	return os.WriteFile(filepath.Join(dir, "dep5"), []byte(content), 0o644)
 }
 
 func buildCopyrightLine(fromYear, year int, author string, reuse bool) string {

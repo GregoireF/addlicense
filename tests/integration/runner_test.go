@@ -1162,6 +1162,91 @@ func TestRun_YearRange_Reuse_PreservesOriginalYear(t *testing.T) {
 	}
 }
 
+// ── --dep5 ────────────────────────────────────────────────────────────────────
+
+func TestRun_Dep5_CreatesFile(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		"main.go":     testBody,
+		"logo.png":    "\x89PNG\r\n",
+		"diagram.svg": "<svg></svg>",
+	})
+	opts := config.Options{
+		License: testLicense,
+		Author:  testAuthor,
+		Year:    2026,
+		Dep5:    true,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+
+	dep5Path := filepath.Join(root, ".reuse", "dep5")
+	content := readFile(t, dep5Path)
+
+	if !strings.Contains(content, "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/") {
+		t.Errorf("missing dep5 Format header:\n%s", content)
+	}
+	if !strings.Contains(content, "logo.png") {
+		t.Errorf("logo.png missing from dep5:\n%s", content)
+	}
+	if !strings.Contains(content, "diagram.svg") {
+		t.Errorf("diagram.svg missing from dep5:\n%s", content)
+	}
+	if strings.Contains(content, "main.go") {
+		t.Errorf("main.go (handled by inline header) must not appear in dep5:\n%s", content)
+	}
+}
+
+func TestRun_Dep5_NoUnhandledFiles(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		"main.go": testBody,
+		"app.ts":  "const x = 1;\n",
+	})
+	opts := config.Options{
+		License: testLicense,
+		Author:  testAuthor,
+		Year:    2026,
+		Dep5:    true,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+
+	dep5Path := filepath.Join(root, ".reuse", "dep5")
+	content := readFile(t, dep5Path)
+	if strings.Contains(content, "Files:") {
+		t.Errorf("Files paragraph should be absent when no unhandled files:\n%s", content)
+	}
+}
+
+func TestRun_Dep5_DryRun(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		"main.go":  testBody,
+		"logo.png": "\x89PNG\r\n",
+	})
+	opts := config.Options{
+		License: testLicense,
+		Author:  testAuthor,
+		Year:    2026,
+		Dep5:    true,
+		DryRun:  true,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+
+	dep5Path := filepath.Join(root, ".reuse", "dep5")
+	if _, err := os.Stat(dep5Path); err == nil {
+		t.Error("--dry-run must not create .reuse/dep5")
+	}
+}
+
 func TestRun_MultipleRoots(t *testing.T) {
 	rootA := makeProject(t, map[string]string{"a.go": "package a\n"})
 	rootB := makeProject(t, map[string]string{"b.go": "package b\n"})

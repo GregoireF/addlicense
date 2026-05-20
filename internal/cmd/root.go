@@ -65,6 +65,7 @@ Examples:
 
 	// Header management
 	root.Flags().BoolVar(&opts.YearRange, "year-range", false, "Preserve original copyright year when updating (emits \"YYYY-YYYY\" range)")
+	root.Flags().BoolVar(&opts.Dep5, "dep5", false, "Generate .reuse/dep5 for files that cannot carry inline headers (REUSE compliance)")
 
 	root.SetVersionTemplate(fmt.Sprintf("addlicense %s\nbuild: %s @ %s\n", version, commit, date))
 

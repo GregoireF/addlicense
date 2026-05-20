@@ -2,7 +2,63 @@
 
 ## GitHub Actions
 
-### Check on every push (recommended)
+### Native GitHub Action (recommended — since v0.5.0)
+
+The simplest integration: one line of YAML, no binary download, no Docker pull. The action installs the correct binary for the runner OS and architecture, then runs addlicense.
+
+```yaml
+name: License check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  license:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: GregoireF/addlicense@v0.5.0
+        with:
+          args: --check .
+```
+
+With a config file (`.addlicenserc.yaml`), `args` can be omitted — the default is `--check .`:
+
+```yaml
+      - uses: GregoireF/addlicense@v0.5.0
+```
+
+To add headers automatically instead of checking:
+
+```yaml
+      - uses: GregoireF/addlicense@v0.5.0
+        with:
+          args: --license MIT --author "Your Name" .
+```
+
+To use addlicense in multiple steps (setup only):
+
+```yaml
+      - uses: GregoireF/addlicense@v0.5.0
+        with:
+          args: ''   # skip the built-in run step
+
+      - name: Check
+        run: addlicense --check .
+
+      - name: Report
+        run: addlicense --format json . | jq .
+```
+
+Supported runners: `ubuntu-*`, `macos-*`, `windows-*` × amd64 + arm64.
+
+---
+
+### Check on every push (curl install)
 
 ```yaml
 name: License check

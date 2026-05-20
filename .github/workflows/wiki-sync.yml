@@ -1,0 +1,29 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "wiki/**"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sync wiki/ to GitHub Wiki
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Push wiki pages
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" wiki-repo
+          cp wiki/*.md wiki-repo/
+          cd wiki-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "wiki: sync from main ($(date -u +%Y-%m-%d))"
+          git push

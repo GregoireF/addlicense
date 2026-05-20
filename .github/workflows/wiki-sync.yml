@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "wiki/**"
+  workflow_dispatch: {}
 
 permissions:
   contents: write
@@ -19,7 +20,10 @@ jobs:
 
       - name: Push wiki pages
         run: |
-          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" wiki-repo
+          if ! git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" wiki-repo 2>/dev/null; then
+            echo "::error::Wiki not initialized. Visit https://github.com/${{ github.repository }}/wiki and create the first page, then re-run this workflow."
+            exit 1
+          fi
           cp wiki/*.md wiki-repo/
           cd wiki-repo
           git config user.name "github-actions[bot]"

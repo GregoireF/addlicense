@@ -17,12 +17,25 @@ import (
 	"github.com/GregoireF/addlicense/internal/scanner"
 )
 
+// Action values for fileResult.
+const (
+	actionAdded       = "added"
+	actionRemoved     = "removed"
+	actionUpdated     = "updated"
+	actionSkipped     = "skipped"
+	actionMissing     = "missing"
+	actionOK          = "ok"
+	actionError       = "error"
+	actionWouldAdd    = "would-add"
+	actionWouldRemove = "would-remove"
+	actionWouldUpdate = "would-update"
+)
+
 // fileResult holds the outcome of processing one file.
 type fileResult struct {
 	Path   string
-	Action string // added | removed | updated | skipped | missing | ok | error
-	// dry-run variants: would-add | would-remove | would-update
-	Err error
+	Action string
+	Err    error
 }
 
 // jsonRecord is the JSON Lines shape for --format json.
@@ -56,6 +69,11 @@ func Run(opts config.Options) error {
 		return err
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		cwd = "."
+	}
+
 	hData := header.Data{
 		Year:          opts.Year,
 		Author:        opts.Author,
@@ -64,7 +82,7 @@ func Run(opts config.Options) error {
 		CopyrightLine: buildCopyrightLine(opts.Year, opts.Author, opts.Reuse),
 	}
 
-	results := runParallel(files, opts, hData, tmplText)
+	results := runParallel(files, opts, hData, tmplText, cwd)
 	return handleResults(results, opts)
 }
 
@@ -84,7 +102,7 @@ func validateOpts(opts *config.Options) error {
 	return nil
 }
 
-func runParallel(files []scanner.File, opts config.Options, hData header.Data, tmplText string) <-chan fileResult {
+func runParallel(files []scanner.File, opts config.Options, hData header.Data, tmplText, cwd string) <-chan fileResult {
 	n := opts.Workers
 	if n <= 0 {
 		n = runtime.NumCPU()
@@ -105,7 +123,7 @@ func runParallel(files []scanner.File, opts config.Options, hData header.Data, t
 		go func() {
 			defer wg.Done()
 			for f := range jobs {
-				out <- processFile(f, opts, hData, tmplText)
+				out <- processFile(f, opts, hData, tmplText, cwd)
 			}
 		}()
 	}
@@ -123,11 +141,14 @@ func runParallel(files []scanner.File, opts config.Options, hData header.Data, t
 	return out
 }
 
-func processFile(f scanner.File, opts config.Options, hData header.Data, tmplText string) fileResult {
-	rel, _ := filepath.Rel(".", f.Path)
+func processFile(f scanner.File, opts config.Options, hData header.Data, tmplText, cwd string) fileResult {
+	rel, err := filepath.Rel(cwd, f.Path)
+	if err != nil {
+		rel = f.Path
+	}
 	lang := header.LangFor(f.Ext)
 	if lang == nil {
-		return fileResult{Path: rel, Action: "skipped"}
+		return fileResult{Path: rel, Action: actionSkipped}
 	}
 	switch {
 	case opts.CheckOnly:
@@ -144,82 +165,82 @@ func processFile(f scanner.File, opts config.Options, hData header.Data, tmplTex
 func checkFile(rel, path string) fileResult {
 	has, err := injector.HasHeader(path)
 	if err != nil {
-		return fileResult{Path: rel, Action: "error", Err: err}
+		return fileResult{Path: rel, Action: actionError, Err: err}
 	}
 	if has {
-		return fileResult{Path: rel, Action: "ok"}
+		return fileResult{Path: rel, Action: actionOK}
 	}
-	return fileResult{Path: rel, Action: "missing"}
+	return fileResult{Path: rel, Action: actionMissing}
 }
 
 func removeFile(rel, path string, lang *header.Lang, dryRun bool) fileResult {
 	if dryRun {
 		has, err := injector.HasHeader(path)
 		if err != nil {
-			return fileResult{Path: rel, Action: "error", Err: err}
+			return fileResult{Path: rel, Action: actionError, Err: err}
 		}
 		if !has {
-			return fileResult{Path: rel, Action: "skipped"}
+			return fileResult{Path: rel, Action: actionSkipped}
 		}
-		return fileResult{Path: rel, Action: "would-remove"}
+		return fileResult{Path: rel, Action: actionWouldRemove}
 	}
 	changed, err := injector.Remove(path, lang.LineComment, lang.BlockOpen, lang.BlockClose)
 	if err != nil {
-		return fileResult{Path: rel, Action: "error", Err: err}
+		return fileResult{Path: rel, Action: actionError, Err: err}
 	}
 	if !changed {
-		return fileResult{Path: rel, Action: "skipped"}
+		return fileResult{Path: rel, Action: actionSkipped}
 	}
-	return fileResult{Path: rel, Action: "removed"}
+	return fileResult{Path: rel, Action: actionRemoved}
 }
 
 func updateFile(rel, path string, lang *header.Lang, hData header.Data, tmplText string, dryRun bool) fileResult {
 	if dryRun {
 		has, err := injector.HasHeader(path)
 		if err != nil {
-			return fileResult{Path: rel, Action: "error", Err: err}
+			return fileResult{Path: rel, Action: actionError, Err: err}
 		}
 		if has {
-			return fileResult{Path: rel, Action: "would-update"}
+			return fileResult{Path: rel, Action: actionWouldUpdate}
 		}
-		return fileResult{Path: rel, Action: "would-add"}
+		return fileResult{Path: rel, Action: actionWouldAdd}
 	}
 	changed, err := injector.Remove(path, lang.LineComment, lang.BlockOpen, lang.BlockClose)
 	if err != nil {
-		return fileResult{Path: rel, Action: "error", Err: err}
+		return fileResult{Path: rel, Action: actionError, Err: err}
 	}
 	rendered, err := header.Render(tmplText, hData, *lang)
 	if err != nil {
-		return fileResult{Path: rel, Action: "error", Err: err}
+		return fileResult{Path: rel, Action: actionError, Err: err}
 	}
 	if err := injector.Inject(path, rendered); err != nil {
-		return fileResult{Path: rel, Action: "error", Err: err}
+		return fileResult{Path: rel, Action: actionError, Err: err}
 	}
 	if changed {
-		return fileResult{Path: rel, Action: "updated"}
+		return fileResult{Path: rel, Action: actionUpdated}
 	}
-	return fileResult{Path: rel, Action: "added"}
+	return fileResult{Path: rel, Action: actionAdded}
 }
 
 func addFile(rel, path string, lang *header.Lang, hData header.Data, tmplText string, dryRun bool) fileResult {
 	has, err := injector.HasHeader(path)
 	if err != nil {
-		return fileResult{Path: rel, Action: "error", Err: err}
+		return fileResult{Path: rel, Action: actionError, Err: err}
 	}
 	if has {
-		return fileResult{Path: rel, Action: "skipped"}
+		return fileResult{Path: rel, Action: actionSkipped}
 	}
 	if dryRun {
-		return fileResult{Path: rel, Action: "would-add"}
+		return fileResult{Path: rel, Action: actionWouldAdd}
 	}
 	rendered, err := header.Render(tmplText, hData, *lang)
 	if err != nil {
-		return fileResult{Path: rel, Action: "error", Err: err}
+		return fileResult{Path: rel, Action: actionError, Err: err}
 	}
 	if err := injector.Inject(path, rendered); err != nil {
-		return fileResult{Path: rel, Action: "error", Err: err}
+		return fileResult{Path: rel, Action: actionError, Err: err}
 	}
-	return fileResult{Path: rel, Action: "added"}
+	return fileResult{Path: rel, Action: actionAdded}
 }
 
 func handleResults(results <-chan fileResult, opts config.Options) error {
@@ -235,9 +256,9 @@ func handleResults(results <-chan fileResult, opts config.Options) error {
 	for r := range results {
 		emit(r, useJSON, enc, opts.Verbose, opts.Quiet)
 		switch r.Action {
-		case "missing":
+		case actionMissing:
 			missing = append(missing, r.Path)
-		case "error":
+		case actionError:
 			if firstErr == nil {
 				firstErr = fmt.Errorf("%s: %w", r.Path, r.Err)
 			}
@@ -263,21 +284,21 @@ func emit(r fileResult, useJSON bool, enc *json.Encoder, verbose, quiet bool) {
 		return
 	}
 	switch r.Action {
-	case "added", "removed", "updated":
+	case actionAdded, actionRemoved, actionUpdated:
 		if !quiet {
 			fmt.Printf("✓ %s\n", r.Path)
 		}
-	case "would-add", "would-remove", "would-update":
+	case actionWouldAdd, actionWouldRemove, actionWouldUpdate:
 		if !quiet {
 			fmt.Printf("[dry-run] %s: %s\n", r.Action, r.Path)
 		}
-	case "missing":
+	case actionMissing:
 		if !quiet {
 			fmt.Fprintf(os.Stderr, "missing header: %s\n", r.Path)
 		}
-	case "error":
+	case actionError:
 		fmt.Fprintf(os.Stderr, "error: %s: %v\n", r.Path, r.Err)
-	case "ok", "skipped":
+	case actionOK, actionSkipped:
 		if verbose {
 			fmt.Printf("  %s (%s)\n", r.Path, r.Action)
 		}

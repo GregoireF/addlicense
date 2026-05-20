@@ -47,6 +47,7 @@ func TestLangFor(t *testing.T) {
 const (
 	testYear      = 2026
 	testAuthor    = "Grégoire"
+	testLicense   = "MIT"
 	testCopyright = "Copyright 2026 Grégoire"
 )
 
@@ -54,8 +55,8 @@ func testData() header.Data {
 	return header.Data{
 		Year:          testYear,
 		Author:        testAuthor,
-		License:       "MIT",
-		SPDX:          "MIT",
+		License:       testLicense,
+		SPDX:          testLicense,
 		CopyrightLine: testCopyright,
 	}
 }
@@ -64,7 +65,7 @@ func TestRenderMITLineComment(t *testing.T) {
 	lang := header.LangFor(".go")
 	data := testData()
 
-	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
+	got, err := header.Render(header.BuiltinTemplate(testLicense), data, *lang)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -80,14 +81,14 @@ func TestRenderMITLineComment(t *testing.T) {
 func TestRenderReuseLineComment(t *testing.T) {
 	lang := header.LangFor(".go")
 	data := header.Data{
-		Year:          2026,
-		Author:        "Grégoire",
-		License:       "MIT",
-		SPDX:          "MIT",
+		Year:          testYear,
+		Author:        testAuthor,
+		License:       testLicense,
+		SPDX:          testLicense,
 		CopyrightLine: "SPDX-FileCopyrightText: 2026 Grégoire",
 	}
 
-	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
+	got, err := header.Render(header.BuiltinTemplate(testLicense), data, *lang)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -103,7 +104,7 @@ func TestRenderBlockComment(t *testing.T) {
 	lang := header.LangFor(".java")
 	data := testData()
 
-	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
+	got, err := header.Render(header.BuiltinTemplate(testLicense), data, *lang)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -117,7 +118,7 @@ func TestRenderHTMLComment(t *testing.T) {
 	lang := header.LangFor(".html")
 	data := testData()
 
-	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
+	got, err := header.Render(header.BuiltinTemplate(testLicense), data, *lang)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -130,7 +131,7 @@ func TestRenderSQLComment(t *testing.T) {
 	lang := header.LangFor(".sql")
 	data := testData()
 
-	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
+	got, err := header.Render(header.BuiltinTemplate(testLicense), data, *lang)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}

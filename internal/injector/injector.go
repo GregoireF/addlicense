@@ -118,7 +118,8 @@ func stripHeader(content, lineComment, blockOpen, blockClose string) (string, bo
 		end++
 	}
 
-	result := append(lines[:start:start], lines[end:]...)
+	result := lines[:start:start]
+	result = append(result, lines[end:]...)
 	return strings.Join(result, "\n"), true
 }
 

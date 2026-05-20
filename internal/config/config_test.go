@@ -11,11 +11,13 @@ import (
 	"github.com/GregoireF/addlicense/internal/config"
 )
 
+const testLicense = "MIT"
+
 // ── Load ──────────────────────────────────────────────────────────────────────
 
 func TestLoad_NoConfigFile(t *testing.T) {
 	dir := t.TempDir()
-	opts := config.Options{License: "MIT", Paths: []string{dir}}
+	opts := config.Options{License: testLicense, Paths: []string{dir}}
 	if err := config.Load(&opts); err != nil {
 		t.Fatalf("Load with no config file: %v", err)
 	}
@@ -77,11 +79,11 @@ func TestLoad_CLIFlagTakesPrecedence(t *testing.T) {
 	dir := t.TempDir()
 	write(t, filepath.Join(dir, ".addlicenserc.yaml"), "license: Apache-2.0\nauthor: FileAuthor\n")
 
-	opts := config.Options{License: "MIT", Author: "CLIAuthor", Paths: []string{dir}}
+	opts := config.Options{License: testLicense, Author: "CLIAuthor", Paths: []string{dir}}
 	if err := config.Load(&opts); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if opts.License != "MIT" {
+	if opts.License != testLicense {
 		t.Errorf("CLI license should win, got %q", opts.License)
 	}
 	if opts.Author != "CLIAuthor" {
@@ -114,14 +116,14 @@ func TestLoad_InvalidYAML(t *testing.T) {
 
 func TestLoad_YAMLPriorityOverYML(t *testing.T) {
 	dir := t.TempDir()
-	write(t, filepath.Join(dir, ".addlicenserc.yaml"), "license: MIT\n")
+	write(t, filepath.Join(dir, ".addlicenserc.yaml"), "license: "+testLicense+"\n")
 	write(t, filepath.Join(dir, ".addlicenserc.yml"), "license: Apache-2.0\n")
 
 	opts := config.Options{Paths: []string{dir}}
 	if err := config.Load(&opts); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if opts.License != "MIT" {
+	if opts.License != testLicense {
 		t.Errorf(".yaml should take priority over .yml, got %q", opts.License)
 	}
 }
@@ -132,7 +134,7 @@ func TestNormalize_Defaults(t *testing.T) {
 	opts := config.Options{}
 	opts.Normalize()
 
-	if opts.License != "MIT" {
+	if opts.License != testLicense {
 		t.Errorf("default license: want MIT, got %q", opts.License)
 	}
 	if opts.Year == 0 {

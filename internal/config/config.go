@@ -26,12 +26,12 @@ type Options struct {
 	Year      int
 	Paths     []string
 	CheckOnly bool
-	Reuse     bool // emit SPDX-FileCopyrightText: instead of Copyright
-	Remove    bool // strip existing license headers
-	Update    bool // remove existing header then inject new one
-	DryRun    bool // preview changes without writing
-	Verbose   bool // print skipped/ok files in addition to modified ones
-	Quiet     bool // suppress all stdout; errors still go to stderr
+	Reuse     bool   // emit SPDX-FileCopyrightText: instead of Copyright
+	Remove    bool   // strip existing license headers
+	Update    bool   // remove existing header then inject new one
+	DryRun    bool   // preview changes without writing
+	Verbose   bool   // print skipped/ok files in addition to modified ones
+	Quiet     bool   // suppress all stdout; errors still go to stderr
 	Format    string // output format: "text" (default) or "json"
 	Workers   int    // parallel workers; 0 = runtime.NumCPU()
 }

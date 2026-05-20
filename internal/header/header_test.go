@@ -45,17 +45,19 @@ func TestLangFor(t *testing.T) {
 	}
 }
 
-func testData(year int, author string) header.Data {
-	line := fmt.Sprintf("Copyright %d", year)
+const testYear = 2026
+
+func testData(author string) header.Data {
+	line := fmt.Sprintf("Copyright %d", testYear)
 	if author != "" {
 		line += " " + author
 	}
-	return header.Data{Year: year, Author: author, License: "MIT", SPDX: "MIT", CopyrightLine: line}
+	return header.Data{Year: testYear, Author: author, License: "MIT", SPDX: "MIT", CopyrightLine: line}
 }
 
 func TestRenderMITLineComment(t *testing.T) {
 	lang := header.LangFor(".go")
-	data := testData(2026, "Grégoire")
+	data := testData("Grégoire")
 
 	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
 	if err != nil {
@@ -94,7 +96,7 @@ func TestRenderReuseLineComment(t *testing.T) {
 
 func TestRenderBlockComment(t *testing.T) {
 	lang := header.LangFor(".java")
-	data := testData(2026, "Grégoire")
+	data := testData("Grégoire")
 
 	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
 	if err != nil {
@@ -108,7 +110,7 @@ func TestRenderBlockComment(t *testing.T) {
 
 func TestRenderHTMLComment(t *testing.T) {
 	lang := header.LangFor(".html")
-	data := testData(2026, "Grégoire")
+	data := testData("Grégoire")
 
 	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
 	if err != nil {
@@ -121,7 +123,7 @@ func TestRenderHTMLComment(t *testing.T) {
 
 func TestRenderSQLComment(t *testing.T) {
 	lang := header.LangFor(".sql")
-	data := testData(2026, "Grégoire")
+	data := testData("Grégoire")
 
 	got, err := header.Render(header.BuiltinTemplate("MIT"), data, *lang)
 	if err != nil {

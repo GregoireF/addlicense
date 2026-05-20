@@ -4,9 +4,12 @@
 
 [![CI](https://github.com/GregoireF/addlicense/actions/workflows/ci.yml/badge.svg)](https://github.com/GregoireF/addlicense/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/GregoireF/addlicense/graph/badge.svg)](https://codecov.io/gh/GregoireF/addlicense)
+[![Go Report Card](https://goreportcard.com/badge/github.com/GregoireF/addlicense)](https://goreportcard.com/report/github.com/GregoireF/addlicense)
 [![Go version](https://img.shields.io/github/go-mod/go-version/GregoireF/addlicense)](go.mod)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/GregoireF/addlicense)](https://github.com/GregoireF/addlicense/releases)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/GregoireF/addlicense/pkgs/container/addlicense)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 `addlicense` scans a directory tree, detects which files are missing a license header, and injects one. On the second run, it does nothing — already-licensed files are left untouched.
 
@@ -51,6 +54,15 @@ addlicense --license MIT --author "Acme Corp" .
 # Check only — exit 1 with list of unlicensed files (useful in CI)
 addlicense --check .
 
+# Remove existing headers
+addlicense --remove .
+
+# Replace all headers with a new licence in one pass
+addlicense --update --license Apache-2.0 --author "Acme Corp" .
+
+# Preview changes without writing to disk
+addlicense --dry-run .
+
 # REUSE/FSFE compliance — emit SPDX-FileCopyrightText: instead of Copyright
 addlicense --license MIT --reuse .
 
@@ -58,7 +70,7 @@ addlicense --license MIT --reuse .
 addlicense --template ./header.txt .
 
 # Ignore paths
-addlicense --ignore dist,vendor,*.gen.go .
+addlicense --ignore "dist,vendor,*.gen.go" .
 ```
 
 ---
@@ -72,9 +84,18 @@ addlicense --ignore dist,vendor,*.gen.go .
 | `--year` | `-y` | current year | Copyright year |
 | `--template` | `-t` | — | Path to a custom header template file |
 | `--ignore` | `-i` | see below | Comma-separated glob patterns to skip |
-| `--check` | `-c` | false | Check mode — no writes, exit 1 if any file is missing a header |
-| `--reuse` | `-r` | false | [REUSE/FSFE](https://reuse.software/) mode — emit `SPDX-FileCopyrightText:` instead of `Copyright` |
+| `--check` | `-c` | `false` | Check mode — no writes, exit 1 if any file is missing a header |
+| `--remove` | `-R` | `false` | Strip existing license headers |
+| `--update` | `-u` | `false` | Replace headers in one pass (`--remove` + inject) |
+| `--dry-run` | `-n` | `false` | Preview changes without writing to disk |
+| `--verbose` | `-v` | `false` | Print every processed file, including already-licensed ones |
+| `--quiet` | `-q` | `false` | Suppress all stdout; errors still go to stderr |
+| `--format` | `-f` | `text` | Output format: `text` or `json` (JSON Lines) |
+| `--workers` | | `NumCPU` | Parallel goroutines for file processing |
+| `--reuse` | `-r` | `false` | [REUSE/FSFE](https://reuse.software/) mode — emit `SPDX-FileCopyrightText:` |
 | `--version` | | | Print version and build info |
+
+**Mutually exclusive:** `--verbose`/`--quiet` · `--check`/`--remove` · `--check`/`--update` · `--remove`/`--update`
 
 **Default ignore list:** `vendor`, `node_modules`, `.git`, `dist`, `build`, `*.pb.go`, `*.gen.go`
 
@@ -113,6 +134,7 @@ Auto-detected in priority order: `.addlicenserc.yaml` → `.addlicenserc.yml` �
 license: Apache-2.0
 author: Acme Corp
 year: 2026
+reuse: false
 ignore:
   - vendor
   - node_modules
@@ -135,6 +157,16 @@ ignore:
   run: addlicense --check .
 ```
 
+**pre-commit** (since v0.4.0 — binary installed automatically)
+
+```yaml
+repos:
+  - repo: https://github.com/GregoireF/addlicense
+    rev: v0.4.0
+    hooks:
+      - id: addlicense-check
+```
+
 **Docker (no install)**
 
 ```yaml
@@ -144,7 +176,7 @@ ignore:
       ghcr.io/gregoiref/addlicense:latest --check .
 ```
 
-More examples (GitLab CI, pre-commit, Makefile) → [Wiki: CI Integration](../../wiki/CI-Integration).
+More examples (GitLab CI, pre-commit, Makefile, JSON output) → [Wiki: CI Integration](../../wiki/CI-Integration).
 
 ---
 

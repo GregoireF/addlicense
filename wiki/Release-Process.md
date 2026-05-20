@@ -12,8 +12,8 @@ Releases are fully automated via GoReleaser triggered by a `v*` tag. No manual s
 ## Cutting a release
 
 ```bash
-git tag v0.4.0
-git push origin v0.4.0
+git tag v0.5.0
+git push origin v0.5.0
 ```
 
 This triggers the GoReleaser GitHub Actions workflow (`.github/workflows/release.yml`), which:
@@ -71,12 +71,12 @@ brew upgrade GregoireF/tap/addlicense
 For critical bug fixes on a released version:
 
 ```bash
-git checkout -b hotfix/v0.3.1 v0.3.0
+git checkout -b hotfix/v0.4.1 v0.4.0
 # apply fix
 git commit -m "fix: ..."
-git push origin hotfix/v0.3.1
+git push origin hotfix/v0.4.1
 # open PR targeting main
 # after merge, tag from main
-git tag v0.3.1
-git push origin v0.3.1
+git tag v0.4.1
+git push origin v0.4.1
 ```

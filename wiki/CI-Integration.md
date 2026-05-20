@@ -165,16 +165,16 @@ license-add:
 To avoid breaking CI when a new release ships, pin to a specific version:
 
 ```yaml
-      - name: Install addlicense v0.3.0
+      - name: Install addlicense v0.4.0
         run: |
-          curl -sSL https://github.com/GregoireF/addlicense/releases/download/v0.3.0/addlicense_linux_amd64.tar.gz \
+          curl -sSL https://github.com/GregoireF/addlicense/releases/download/v0.4.0/addlicense_linux_amd64.tar.gz \
             | tar -xz -C /usr/local/bin addlicense
 ```
 
 Or with Docker:
 
 ```yaml
-        run: docker run --rm -v "$PWD:/src" -w /src ghcr.io/gregoiref/addlicense:v0.3.0 --check .
+        run: docker run --rm -v "$PWD:/src" -w /src ghcr.io/gregoiref/addlicense:v0.4.0 --check .
 ```
 
 ---

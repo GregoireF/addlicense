@@ -11,6 +11,7 @@ Welcome to the addlicense documentation. This wiki covers internals, advanced us
 | [Adding an SPDX Template](Adding-an-SPDX-Template) | Add a built-in header template for a new licence identifier |
 | [Configuration Reference](Configuration-Reference) | Full reference for `.addlicenserc.yaml`, all CLI flags, and config priority |
 | [CI Integration](CI-Integration) | GitHub Actions, GitLab CI, pre-commit, Makefile, Docker examples |
+| [Removing Headers](Removing-Headers) | `--remove`, `--update`, `--dry-run` — header removal and migration workflows |
 | [REUSE Compliance](REUSE-Compliance) | Using `--reuse` for FSFE/REUSE and EU public sector projects |
 | [Release Process](Release-Process) | How releases are cut, GoReleaser pipeline, Homebrew tap, versioning rules |
 

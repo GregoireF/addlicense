@@ -91,6 +91,28 @@ func TestLoad_CLIFlagTakesPrecedence(t *testing.T) {
 	}
 }
 
+func TestLoad_ConfigIgnoreApplied(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, ".addlicenserc.yaml"), "ignore:\n  - vendor\n  - generated\n")
+
+	opts := config.Options{Paths: []string{dir}}
+	if err := config.Load(&opts); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(opts.Ignore) == 0 {
+		t.Fatal("ignore from config should be applied when CLI has no ignore")
+	}
+	found := false
+	for _, p := range opts.Ignore {
+		if p == "vendor" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected 'vendor' in ignore list, got %v", opts.Ignore)
+	}
+}
+
 func TestLoad_CLIIgnoreTakesPrecedence(t *testing.T) {
 	dir := t.TempDir()
 	write(t, filepath.Join(dir, ".addlicenserc.yaml"), "ignore:\n  - generated\n")

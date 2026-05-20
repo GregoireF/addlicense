@@ -128,6 +128,52 @@ func TestWalk_SkipsNoExtension(t *testing.T) {
 	}
 }
 
+func TestWalk_SubstringIgnorePattern(t *testing.T) {
+	// "generated" is not a glob pattern, but it IS a substring of "auto_generated.go".
+	// This exercises the strings.Contains branch in shouldIgnore.
+	root := t.TempDir()
+	for name, content := range map[string]string{
+		"main.go":           "package main",
+		"auto_generated.go": "// code gen",
+	} {
+		if err := os.WriteFile(filepath.Join(root, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	found, err := scanner.Walk([]string{root}, []string{"generated"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range found {
+		if filepath.Base(f.Path) == "auto_generated.go" {
+			t.Errorf("auto_generated.go should be ignored by substring pattern: %v", found)
+		}
+	}
+}
+
+func TestWalk_SkipsSymlinks(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "real.go")
+	if err := os.WriteFile(target, []byte("package main"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "link.go")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skip("cannot create symlinks on this platform: " + err.Error())
+	}
+
+	found, err := scanner.Walk([]string{root}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range found {
+		if filepath.Base(f.Path) == "link.go" {
+			t.Errorf("symlink should be skipped: %s", f.Path)
+		}
+	}
+}
+
 func TestWalk_CollectsMarkdownAndJSON(t *testing.T) {
 	// The scanner is language-agnostic: it collects ALL files with extensions.
 	// Filtering by supported language is the runner's responsibility, not the scanner's.

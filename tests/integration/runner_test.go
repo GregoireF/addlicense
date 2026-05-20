@@ -16,10 +16,11 @@ import (
 )
 
 const (
-	testAuthor  = "Grégoire"
-	testLicense = "MIT"
-	testMainGo  = "main.go"
-	testBody    = "package main\n"
+	testAuthor       = "Grégoire"
+	testLicense      = "MIT"
+	testMainGo       = "main.go"
+	testBody         = "package main\n"
+	testLicensedBody = "// SPDX-License-Identifier: MIT\n// Copyright 2026 Grégoire\n\npackage main\n"
 )
 
 // makeProject creates a temporary directory tree from a map of relative path → content.
@@ -430,7 +431,7 @@ func TestRun_Reuse_Idempotent(t *testing.T) {
 
 func TestRun_Remove_LineComment(t *testing.T) {
 	root := makeProject(t, map[string]string{
-		testMainGo: "// SPDX-License-Identifier: MIT\n// Copyright 2026 Grégoire\n\npackage main\n",
+		testMainGo: testLicensedBody,
 	})
 	opts := config.Options{
 		Ignore: config.DefaultIgnore,
@@ -510,7 +511,7 @@ func TestRun_Remove_NonLicenseComment_NoChange(t *testing.T) {
 
 func TestRun_Update_ReplaceHeader(t *testing.T) {
 	root := makeProject(t, map[string]string{
-		testMainGo: "// SPDX-License-Identifier: MIT\n// Copyright 2026 Grégoire\n\npackage main\n",
+		testMainGo: testLicensedBody,
 	})
 	opts := config.Options{
 		License: "Apache-2.0",
@@ -538,6 +539,83 @@ func TestRun_Update_ReplaceHeader(t *testing.T) {
 	}
 }
 
+func TestRun_Update_FileWithoutHeader(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	opts := config.Options{
+		License: testLicense,
+		Author:  testAuthor,
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Update:  true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, testMainGo))
+	if !strings.Contains(content, "SPDX-License-Identifier: MIT") {
+		t.Errorf("update on unlicensed file should add header:\n%s", content)
+	}
+	if !strings.Contains(content, "package main") {
+		t.Errorf("body should be preserved:\n%s", content)
+	}
+}
+
+func TestRun_DryRun_Update_WithHeader(t *testing.T) {
+	original := testLicensedBody
+	root := makeProject(t, map[string]string{testMainGo: original})
+	opts := config.Options{
+		License: "Apache-2.0",
+		Author:  testAuthor,
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Update:  true,
+		DryRun:  true,
+	}
+
+	out := captureStdout(t, func() {
+		if err := runner.Run(opts); err != nil {
+			t.Error(err)
+		}
+	})
+
+	content := readFile(t, filepath.Join(root, testMainGo))
+	if content != original {
+		t.Errorf("dry-run --update should not modify file:\n%s", content)
+	}
+	if !strings.Contains(out, "would-update") {
+		t.Errorf("expected would-update in output, got:\n%s", out)
+	}
+}
+
+func TestRun_DryRun_Update_WithoutHeader(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	opts := config.Options{
+		License: testLicense,
+		Author:  testAuthor,
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Update:  true,
+		DryRun:  true,
+	}
+
+	out := captureStdout(t, func() {
+		if err := runner.Run(opts); err != nil {
+			t.Error(err)
+		}
+	})
+
+	content := readFile(t, filepath.Join(root, testMainGo))
+	if content != testBody {
+		t.Errorf("dry-run --update should not modify file:\n%s", content)
+	}
+	if !strings.Contains(out, "would-add") {
+		t.Errorf("expected would-add in output, got:\n%s", out)
+	}
+}
+
 // ── Dry-run mode ──────────────────────────────────────────────────────────────
 
 func TestRun_DryRun_NoWrite(t *testing.T) {
@@ -562,7 +640,7 @@ func TestRun_DryRun_NoWrite(t *testing.T) {
 }
 
 func TestRun_DryRun_Remove(t *testing.T) {
-	original := "// SPDX-License-Identifier: MIT\n// Copyright 2026 Grégoire\n\npackage main\n"
+	original := testLicensedBody
 	root := makeProject(t, map[string]string{testMainGo: original})
 	opts := config.Options{
 		Ignore: config.DefaultIgnore,
@@ -577,6 +655,43 @@ func TestRun_DryRun_Remove(t *testing.T) {
 	content := readFile(t, filepath.Join(root, testMainGo))
 	if content != original {
 		t.Errorf("dry-run --remove should not modify files:\ngot:\n%s", content)
+	}
+}
+
+func TestRun_DryRun_Remove_NoHeader(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	opts := config.Options{
+		Ignore: config.DefaultIgnore,
+		Paths:  []string{root},
+		Remove: true,
+		DryRun: true,
+		Quiet:  true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, testMainGo))
+	if content != testBody {
+		t.Errorf("dry-run --remove on file without header should be a no-op:\n%s", content)
+	}
+}
+
+func TestRun_ErrorOnReadOnlyFile(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	path := filepath.Join(root, testMainGo)
+	if err := os.Chmod(path, 0o444); err != nil {
+		t.Skip("cannot set read-only attribute: " + err.Error())
+	}
+	defer os.Chmod(path, 0o644) //nolint:errcheck
+
+	// Verify read-only is actually enforced (administrators can bypass it).
+	if err := os.WriteFile(path, []byte("test"), 0o644); err == nil {
+		t.Skip("read-only not enforced (running as administrator?)")
+	}
+
+	opts := defaultOpts(testLicense, root)
+	if err := runner.Run(opts); err == nil {
+		t.Error("expected error when writing to a read-only file")
 	}
 }
 
@@ -833,6 +948,116 @@ func captureStdout(t *testing.T, fn func()) string {
 		t.Fatal(err)
 	}
 	return string(out)
+}
+
+// ── Error paths ───────────────────────────────────────────────────────────────
+
+func TestRun_InvalidRoot_Error(t *testing.T) {
+	opts := config.Options{
+		License: testLicense,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{filepath.Join(t.TempDir(), "nonexistent")},
+	}
+	if err := runner.Run(opts); err == nil {
+		t.Error("expected error for nonexistent root path")
+	}
+}
+
+func TestRun_ErrorOnReadOnlyFile_Update(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		testMainGo: testLicensedBody,
+	})
+	path := filepath.Join(root, testMainGo)
+	if err := os.Chmod(path, 0o444); err != nil {
+		t.Skip("cannot set read-only attribute: " + err.Error())
+	}
+	defer os.Chmod(path, 0o644) //nolint:errcheck
+
+	if err := os.WriteFile(path, []byte("test"), 0o644); err == nil {
+		t.Skip("read-only not enforced (running as administrator?)")
+	}
+
+	opts := config.Options{
+		License: "Apache-2.0",
+		Author:  testAuthor,
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Update:  true,
+	}
+	if err := runner.Run(opts); err == nil {
+		t.Error("expected error when updating a read-only file")
+	}
+}
+
+func TestRun_ErrorOnReadOnlyFile_Remove(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		testMainGo: testLicensedBody,
+	})
+	path := filepath.Join(root, testMainGo)
+	if err := os.Chmod(path, 0o444); err != nil {
+		t.Skip("cannot set read-only attribute: " + err.Error())
+	}
+	defer os.Chmod(path, 0o644) //nolint:errcheck
+
+	if err := os.WriteFile(path, []byte("test"), 0o644); err == nil {
+		t.Skip("read-only not enforced (running as administrator?)")
+	}
+
+	opts := config.Options{
+		Ignore: config.DefaultIgnore,
+		Paths:  []string{root},
+		Remove: true,
+	}
+	if err := runner.Run(opts); err == nil {
+		t.Error("expected error when removing header from read-only file")
+	}
+}
+
+func TestRun_Format_JSON_WithError(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	path := filepath.Join(root, testMainGo)
+	if err := os.Chmod(path, 0o444); err != nil {
+		t.Skip("cannot set read-only attribute: " + err.Error())
+	}
+	defer os.Chmod(path, 0o644) //nolint:errcheck
+
+	if err := os.WriteFile(path, []byte("test"), 0o644); err == nil {
+		t.Skip("read-only not enforced (running as administrator?)")
+	}
+
+	opts := config.Options{
+		License: testLicense,
+		Author:  testAuthor,
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Format:  "json",
+	}
+
+	out := captureStdout(t, func() {
+		runner.Run(opts) //nolint:errcheck
+	})
+
+	// The JSON record for the error should include the "error" field.
+	if !strings.Contains(out, `"error"`) {
+		t.Errorf("JSON error record should include error field, got:\n%s", out)
+	}
+}
+
+func TestRun_NoFilesToProcess(t *testing.T) {
+	// A project with only extension-less files (Makefile, Dockerfile) produces an
+	// empty scanner.Walk result, which exercises the n==0 guard in runParallel.
+	root := t.TempDir()
+	for _, name := range []string{"Makefile", "Dockerfile"} {
+		if err := os.WriteFile(filepath.Join(root, name), []byte("all:"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	opts := defaultOpts(testLicense, root)
+	if err := runner.Run(opts); err != nil {
+		t.Fatalf("empty project should not error: %v", err)
+	}
 }
 
 // ── Multiple roots ────────────────────────────────────────────────────────────

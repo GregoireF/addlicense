@@ -149,3 +149,56 @@ func TestBuiltinTemplateLicenses(t *testing.T) {
 		}
 	}
 }
+
+func TestBuiltinTemplate_UnknownLicense(t *testing.T) {
+	// Exercises the default case, which emits a generic SPDX identifier.
+	tmpl := header.BuiltinTemplate("ISC")
+	if tmpl == "" {
+		t.Error("BuiltinTemplate with unknown license should return non-empty template")
+	}
+	if !strings.Contains(tmpl, "{{.SPDX}}") {
+		t.Errorf("unknown license template should reference .SPDX, got: %q", tmpl)
+	}
+}
+
+func TestRender_InvalidTemplate_Error(t *testing.T) {
+	lang := header.LangFor(".go")
+	data := testData()
+
+	_, err := header.Render("{{invalid template", data, *lang)
+	if err == nil {
+		t.Error("expected error for invalid template, got nil")
+	}
+}
+
+func TestRenderLineComment_EmptyLine(t *testing.T) {
+	lang := header.LangFor(".go")
+	data := testData()
+
+	// A template with an empty middle line exercises the l=="" branch in writeLineComment.
+	got, err := header.Render("{{.CopyrightLine}}\n\nSPDX-License-Identifier: MIT", data, *lang)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	if !strings.Contains(got, "//\n") {
+		t.Errorf("expected empty comment line (//\\n), got:\n%s", got)
+	}
+}
+
+func TestRenderBlockComment_EmptyLine(t *testing.T) {
+	lang := header.LangFor(".java")
+	data := testData()
+
+	// A template with an empty middle line exercises the l=="" branch in writeBlockComment.
+	got, err := header.Render("{{.CopyrightLine}}\n\nSPDX-License-Identifier: MIT", data, *lang)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	if !strings.Contains(got, "/*") || !strings.Contains(got, "*/") {
+		t.Errorf("expected block comment markers, got:\n%s", got)
+	}
+	// The empty middle line becomes a prefix-only line (e.g. " *\n").
+	if !strings.Contains(got, " *\n") {
+		t.Errorf("expected empty block comment line ( *\\n), got:\n%s", got)
+	}
+}

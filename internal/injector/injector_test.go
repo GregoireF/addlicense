@@ -107,6 +107,24 @@ func TestInject_PreservesShebang(t *testing.T) {
 	}
 }
 
+func TestInject_ShebangNoNewline(t *testing.T) {
+	// Shebang that is the entire file content (no trailing newline) exercises the
+	// else branch in Inject's shebang handling.
+	path := writeTemp(t, "#!/usr/bin/env bash")
+	h := "# SPDX-License-Identifier: MIT\n"
+	if err := injector.Inject(path, h); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := os.ReadFile(path)
+	content := string(got)
+	if !strings.HasPrefix(content, "#!/usr/bin/env bash") {
+		t.Errorf("shebang should be first:\n%s", content)
+	}
+	if !contains(content, h) {
+		t.Errorf("header not found:\n%s", content)
+	}
+}
+
 func TestHasHeader_FileNotFound(t *testing.T) {
 	_, err := injector.HasHeader(nonexistentPath(t))
 	if err == nil {
@@ -316,6 +334,60 @@ func TestRemove_NonExistentFile_Error(t *testing.T) {
 	_, err := injector.Remove(nonexistentPath(t), "//", "", "")
 	if err == nil {
 		t.Error("expected error for nonexistent file, got nil")
+	}
+}
+
+func TestRemove_BlockComment_NonLicenseContent_NoChange(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "index.html")
+	content := "<!--\nThis is a regular HTML comment.\nNo license info here.\n-->\n<html></html>\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err := injector.Remove(path, "", "<!--", "-->")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed {
+		t.Error("non-license block comment must not be removed")
+	}
+	got, _ := os.ReadFile(path)
+	if string(got) != content {
+		t.Error("file should be unmodified")
+	}
+}
+
+func TestRemove_BlockComment_UnclosedBlock_NoChange(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "broken.html")
+	content := "<!-- SPDX-License-Identifier: MIT\n<html></html>\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err := injector.Remove(path, "", "<!--", "-->")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed {
+		t.Error("unclosed block comment should not be removed")
+	}
+}
+
+func TestRemove_BlockComment_NoOpenAtStart_NoChange(t *testing.T) {
+	// Content that doesn't start with the block-open marker; findBlockCommentHeader
+	// must return (0, false) immediately without scanning further.
+	path := filepath.Join(t.TempDir(), "main.c")
+	content := "int main() { return 0; }\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err := injector.Remove(path, "", "/*", "*/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed {
+		t.Error("file not starting with block-open must not be modified")
 	}
 }
 

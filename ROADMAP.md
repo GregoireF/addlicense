@@ -2,6 +2,8 @@
 
 Tracks the direction of addlicense. Nothing here is a commitment — issues and real-world usage drive priorities.
 
+See the [GitHub Wiki](../../wiki) for architecture decisions, design principles, and detailed contributor guides.
+
 ---
 
 ## Context — French and European norms
@@ -14,20 +16,18 @@ Created by the European Commission, EUPL-1.2 is the reference licence for public
 
 It is copyleft but explicitly compatible with GPL-2.0, GPL-3.0, AGPL-3.0, EUPL-1.1, MPL-2.0, and others — making it safe to use alongside most major open source stacks.
 
-**Status in addlicense:** built-in template added in v0.2.1.
+**Status:** built-in template since v0.2.0 (shipped as v0.3.0).
 
 ### REUSE Specification — FSFE
 
-The [REUSE specification](https://reuse.software/) from the Free Software Foundation Europe defines a machine-readable standard for per-file copyright and licensing. It is gaining adoption in European public sector projects (German federal agencies, Netherlands open government initiative) and is increasingly a criterion in OSS procurement. Key difference from the current addlicense format:
+The [REUSE specification](https://reuse.software/) from the Free Software Foundation Europe defines a machine-readable standard for per-file copyright and licensing. It is gaining adoption in European public sector projects (German federal agencies, Netherlands open government initiative) and is increasingly a criterion in OSS procurement.
 
-| Field | addlicense default | REUSE |
+| Field | addlicense default | REUSE (`--reuse`) |
 | --- | --- | --- |
 | Copyright | `Copyright 2026 Author` | `SPDX-FileCopyrightText: 2026 Author` |
 | Licence | `SPDX-License-Identifier: MIT` | `SPDX-License-Identifier: MIT` |
 
-The `copyright` keyword is caught by addlicense's idempotence check regardless of format, so REUSE-formatted files are already correctly skipped. The gap is in *writing* REUSE-compliant headers.
-
-**Planned:** `--reuse` flag in v0.3.0.
+**Status:** `--reuse` flag shipped in v0.3.0.
 
 ### CRA — Cyber Resilience Act
 
@@ -37,41 +37,61 @@ The EU Cyber Resilience Act (enforcement from 2027) requires software manufactur
 
 ### AGPL-3.0 — Closing the SaaS loophole
 
-The GNU Affero GPL is widely used in European cloud-native and SaaS projects (Nextcloud, Framasoft ecosystem, many OSS-funded startups) specifically to close the "application service provider loophole" — companies that run modified OSS internally without distributing binaries are still required to publish source under AGPL. Increasingly relevant as French and EU public procurement favours OSS with strong copyleft guarantees.
+Widely used in European cloud-native and SaaS projects (Nextcloud, Framasoft ecosystem) to close the "application service provider loophole". Increasingly relevant as French and EU public procurement favours OSS with strong copyleft guarantees.
 
-**Status in addlicense:** built-in template added in v0.2.1.
+**Status:** built-in template since v0.2.0 (shipped as v0.3.0).
+
+---
+
+## Released
+
+### v0.1.0 — 2026-05-18
+Core CLI: unified command, SPDX templates (MIT, Apache-2.0, GPL-3.0, MPL-2.0, BSD-2/3-Clause), custom templates, config auto-detection, idempotence, shebang preservation, check mode. GoReleaser multi-platform + Homebrew tap + Docker.
+
+### v0.2.0 — 2026-05-19
+Extended language support (HTML/Vue/Svelte, CSS/SCSS, proto, SQL), Docker GHCR, Codecov integration, `.addlicenserc.yaml` dogfooding, Dependabot.
+
+### v0.3.0 — 2026-05-20
+EU licence templates (EUPL-1.2, AGPL-3.0-only, LGPL-2.1/3.0-only). `--reuse` flag for FSFE/REUSE compliance. 90 %+ coverage, golangci-lint v2 config, full gofmt compliance. Contribution infrastructure: issue templates, PR template, CODEOWNERS, GitHub Wiki, Discussions.
 
 ---
 
 ## Planned versions
 
-### v0.3.0 — REUSE compliance
+### v0.4.0 — Header removal and power-user flags
 
-- `--reuse` flag: emit `SPDX-FileCopyrightText:` instead of `Copyright`
-- Validate output against [fsfe/reuse-action](https://github.com/fsfe/reuse-action) in CI (dogfooding)
-- Optionally: `.reuse/dep5` stub generation for assets that cannot carry inline headers (images, binaries)
+- **`--remove` flag**: strip existing headers — needed when migrating between licences (MIT → EUPL-1.2, Apache-2.0 → AGPL-3.0). Detect the header block (already identified by the idempotence scan window), remove it, leave the rest of the file untouched.
+- **`--update` flag**: combine remove + inject in a single pass. The common migration workflow: `addlicense --update --license EUPL-1.2 .`
+- **`--verbose` / `--quiet` flags**: `--verbose` prints every file processed (not just injected ones); `--quiet` suppresses all stdout for pure CI usage (non-zero exit on error is still emitted to stderr).
+- **`--format json` output**: machine-readable report (file path, status: added/skipped/missing/error) for integration with other tools (dashboards, pre-commit hooks with structured output).
+- **Parallel file processing**: `filepath.WalkDir` with a worker pool (bounded goroutines) for large monorepos. Deferred until benchmarks justify it — sequential is under 1s for < 10 000 files; goroutine overhead is real.
 
-### v0.4.0 — Power user features
+### v0.5.0 — Ecosystem and DX
 
-- `--remove` flag: strip existing headers — needed when migrating between licences (MIT → EUPL-1.2, Apache-2.0 → AGPL-3.0)
-- Parallel file processing: `filepath.WalkDir` with goroutines for large monorepos
-- `--verbose` / `--quiet` flags for CI tuning
-- JSON output (`--format json`) for integration with other tools
+- **Pre-commit hook support**: publish an official `.pre-commit-hooks.yaml` so `addlicense` can be added to [pre-commit](https://pre-commit.com/) without manual configuration.
+- **Native GitHub Action** (`action.yml`): no Docker pull, no binary download, instant cold start. Cross-compiles the binary and ships it inside the action repository on each release. Removes the 10 s Docker image pull from CI.
+- **Editor integration hints**: VS Code extension or devcontainer feature that runs `addlicense --check` in the background and highlights unlicensed files (out of scope for the binary itself, but documentation and integration guide).
+- **`--year-range` flag**: emit `Copyright 2024–2026 Author` for files that span multiple years. Useful for long-lived projects or when re-running addlicense years after initial injection.
+- **`.reuse/dep5` stub generation**: for assets that cannot carry inline headers (images, binaries, generated files), emit a REUSE-compliant `dep5` bulk-licence declaration.
 
-### v1.0.0 — Ecosystem integration
+### v1.0.0 — Stable API and SBOM
 
-- Native GitHub Action (`action.yml`) — no binary download, no Docker pull, instant cold start
-- SBOM generation: aggregate scanned headers into an SPDX 2.3 document (CRA readiness)
-- Stable public Go API — `github.com/GregoireF/addlicense/pkg` importable as a library
-- Semantic versioning guarantee on the public API from this point forward
+- **Stable public Go API** — `github.com/GregoireF/addlicense/pkg` importable as a library with a stable, documented interface. Semantic versioning guarantee from this point forward.
+- **SBOM generation (`--sbom`)**: aggregate scanned SPDX headers into an [SPDX 2.3](https://spdx.github.io/spdx-spec/v2.3/) document (JSON or tag-value). CRA readiness: one command produces a file-level SBOM suitable for submission to procurement or auditors.
+- **`--check --format json` exit contracts**: stable exit codes and JSON schema for downstream tooling (lint runners, CI dashboards).
+- **Multi-licence support**: some files legitimately carry two identifiers (`SPDX-License-Identifier: MIT OR Apache-2.0`). v1.0.0 preserves but does not inject multi-licence expressions.
 
 ---
 
 ## Open questions
 
-**REUSE as default vs. opt-in** — The `SPDX-FileCopyrightText:` format is more future-proof and better aligned with the FSFE ecosystem, but it breaks the convention assumed by most existing tooling (`grep -r "Copyright"`). The `--reuse` flag preserves backward compatibility; making it the default would require a major version bump. Lean toward flag for now.
+**REUSE as default vs. opt-in** — `SPDX-FileCopyrightText:` is more future-proof and better aligned with the FSFE ecosystem, but breaks `grep -r "Copyright"` conventions. The `--reuse` flag preserves backward compatibility; making it the default would require a major version bump. Lean toward flag for now.
 
-**GitHub Action packaging** — A native action requires the binary to ship inside the action repository (no Docker). This works but adds complexity to the release pipeline (cross-compile + commit to action repo on each tag). The Docker action path is simpler but adds ~10 seconds of pull time per CI run. Decision deferred to v1.0.0.
+**`--remove` heuristic** — the current scan window (top 20 lines, `SPDX-License-Identifier:` or `copyright`) reliably detects headers, but removing them requires knowing where the header ends. Heuristic: remove all consecutive comment lines from the top of the file (after shebang if present). Edge case: files where the first non-header line is also a comment. Needs a test matrix before shipping.
+
+**GitHub Action packaging** — a native action requires the binary to ship inside the action repository (no Docker). This adds complexity to the release pipeline (cross-compile + commit to action repo on each tag). The Docker action path is simpler but adds ~10 s of pull time per CI run. Decision deferred to v0.5.0.
+
+**Year-range detection** — to emit `2024–2026` instead of `2026`, addlicense would need to read the existing header (if present) to extract the original year, then compare with the current year. This adds a read pass before the inject pass. The complexity may not be worth it for most users.
 
 **EUPL multi-language legal binding** — EUPL-1.2 exists in 23 languages, all legally binding. Should addlicense expose `--lang fr` to write `EUPL-1.2` with a French-language note? Almost certainly out of scope — the SPDX identifier is language-agnostic and sufficient for all tooling downstream.
 

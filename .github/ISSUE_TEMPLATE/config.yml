@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/GregoireF/addlicense/discussions
+    about: For questions, usage help, and feature ideas — use Discussions to keep Issues clean.
+  - name: Wiki
+    url: https://github.com/GregoireF/addlicense/wiki
+    about: Architecture, configuration reference, adding languages/templates, CI integration guides.

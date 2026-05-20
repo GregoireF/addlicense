@@ -7,27 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.3.0] — 2026-05-20
+
 ### Added
-- `--reuse` / `-r` flag: emits `SPDX-FileCopyrightText: <year> <author>` instead of `Copyright <year> <author>` — [REUSE/FSFE specification](https://reuse.software/) compliance. Idempotence detection already handled (`FileCopyrightText` contains `copyright` as a substring). Choice: opt-in flag rather than default to avoid breaking `grep -r "Copyright"` tooling; making it default requires a major version bump (see [ROADMAP.md](ROADMAP.md)).
-- `CopyrightLine` field added to `header.Data` — pre-formatted copyright string passed to templates; all built-in templates now use `{{.CopyrightLine}}` instead of inline `Copyright {{.Year}} {{.Author}}` conditionals, which removes template duplication and enables REUSE mode without template changes.
-- Built-in templates for EUPL-1.2, AGPL-3.0, LGPL-2.1, LGPL-3.0 — covers European public sector and copyleft licences (see [ROADMAP.md](ROADMAP.md) for EU compliance context)
-- CHANGELOG.md (this file) and ROADMAP.md — EU/French norms context + version planning
-- golangci-lint v2 configuration (`.golangci.yml`): 15 linters beyond the default set — `bodyclose`, `exhaustive`, `goconst`, `gocritic`, `gocyclo`, `godot`, `misspell`, `nestif`, `nilerr`, `prealloc`, `revive`, `unconvert`, `unparam`; `goimports` in `formatters` section (golangci-lint v2 split formatters from linters)
-- Codecov configuration (`.codecov.yml`): 90% coverage threshold enforced on both project and patch; structured comment layout
-- Extended test suite — coverage raised to 90%+:
-  - `internal/scanner`: 4 new unit tests — glob ignore patterns, invalid root, no-extension files, markdown/JSON collection
-  - `internal/injector`: 5 new unit tests — file-not-found paths, empty file, scan window boundary, case-insensitive detection
-  - `internal/config`: 11 new unit tests — `Load` priority rules, YAML/YML/JSON auto-detection, CLI flag override, invalid YAML error path
-  - `tests/integration/`: integration tests moved from `internal/runner/` to a dedicated package; 8 additional scenarios covering block/HTML/SQL comment styles, EU licences, multiple roots, custom templates
-- `CONTRIBUTING.md` — development setup, test commands, commit and PR conventions
+
+- **`--reuse` / `-r` flag** — emits `SPDX-FileCopyrightText: <year> <author>` instead of `Copyright <year> <author>`, complying with the [REUSE/FSFE specification](https://reuse.software/). Idempotence works transparently (`FileCopyrightText` contains `copyright` as a substring). Opt-in flag rather than default to preserve `grep -r "Copyright"` workflows; making it the default would require a major version bump.
+- **`header.Data.CopyrightLine`** — pre-formatted string computed once by `runner.buildCopyrightLine(year, author, reuse)` and consumed by all built-in templates via `{{.CopyrightLine}}`; removes per-template `{{if .Author}}` conditionals and centralises REUSE/non-REUSE logic in one place.
+- **Built-in SPDX templates**: EUPL-1.2, AGPL-3.0-only, LGPL-2.1-only, LGPL-3.0-only — EU public sector and strong-copyleft licences (see [ROADMAP.md](ROADMAP.md) for compliance context).
+- **golangci-lint v2 configuration** (`.golangci.yml`): 15 linters beyond the default — `bodyclose`, `exhaustive`, `goconst`, `gocritic`, `gocyclo`, `godot`, `misspell`, `nestif`, `nilerr`, `prealloc`, `revive`, `unconvert`, `unparam`; `goimports` in `formatters` section (v2 separates formatters from linters).
+- **Codecov** (`.codecov.yml`): 90 % coverage threshold enforced on both project and patch.
+- **Extended test suite** — coverage ≥ 90 %:
+  - `internal/scanner`: 4 unit tests — glob ignore patterns, invalid root, no-extension files, markdown/JSON collection
+  - `internal/injector`: 5 unit tests — file-not-found, empty file, scan-window boundary, case-insensitive detection
+  - `internal/config`: 11 unit tests — `Load` priority rules, YAML/YML/JSON auto-detection, CLI flag override, invalid YAML error
+  - `tests/integration/`: 3 REUSE tests + 8 additional scenarios (block/HTML/SQL comment styles, EU licences, multiple roots, custom templates)
+- **`CONTRIBUTING.md`** — development setup, test commands, lint config decisions, commit/PR conventions, adding-a-language and adding-a-template guides, release process, design principles.
+- **`CHANGELOG.md`** and **`ROADMAP.md`** — version planning and EU/French compliance context.
+- **GitHub issue templates** (`.github/ISSUE_TEMPLATE/`): bug report and feature request with structured fields.
+- **GitHub PR template** (`.github/PULL_REQUEST_TEMPLATE.md`): checklist covering tests, CHANGELOG, lint, coverage.
+- **`CODEOWNERS`** — GregoireF as default reviewer on all PRs.
 
 ### Changed
-- GoReleaser v2: `brews:` key (removed in v2.10) replaced by `homebrew_casks:` — Homebrew tap formula moves from `Formula/` to `Casks/` on next release
-- CI test command now uses `-coverpkg=./...` for cross-package coverage attribution — integration tests in `tests/integration/` correctly attribute coverage to `internal/` packages
-- Test organisation: runner integration tests promoted to `tests/integration/` package (`package integration_test`) following Go conventions — unit tests (`_test.go`) stay alongside source, integration tests get their own top-level directory
+
+- **GoReleaser v2**: `brews:` key replaced by `homebrew_casks:` (removed in v2.10) — Homebrew tap formula now lives at `Casks/addlicense.rb`; old `Formula/addlicense.rb` removed from tap.
+- **CI coverage**: `-coverpkg=./...` flag ensures integration tests in `tests/integration/` correctly attribute coverage to `internal/` packages.
+- **Test organisation**: integration tests promoted from `internal/runner/` to dedicated `tests/integration/` package (`package integration_test`), following Go conventions.
 
 ### Fixed
-- `internal/header/header.go`: `Lang` struct alignment and `langs` map formatting brought into strict gofmt compliance — gofmt aligns map values per comment-separated group (comments reset the tabwriter), not globally
+
+- **`internal/header/header.go`**: `Lang` struct and `langs` map brought into strict gofmt compliance — gofmt aligns map-literal values per comment-separated group (comments reset the tabwriter), not globally.
 
 ---
 

@@ -164,6 +164,47 @@ func TestNormalize_CustomIgnorePreserved(t *testing.T) {
 	}
 }
 
+// ── Reuse ─────────────────────────────────────────────────────────────────────
+
+func TestLoad_ReuseFromConfig(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, ".addlicenserc.yaml"), "license: MIT\nreuse: true\n")
+
+	opts := config.Options{Paths: []string{dir}}
+	if err := config.Load(&opts); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !opts.Reuse {
+		t.Error("expected Reuse=true from config file")
+	}
+}
+
+func TestLoad_CLIReuseTakesPrecedence(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, ".addlicenserc.yaml"), "reuse: true\n")
+
+	opts := config.Options{Reuse: true, Paths: []string{dir}}
+	if err := config.Load(&opts); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !opts.Reuse {
+		t.Error("Reuse should remain true")
+	}
+}
+
+func TestLoad_ReuseDefaultsFalse(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, ".addlicenserc.yaml"), "license: MIT\n")
+
+	opts := config.Options{Paths: []string{dir}}
+	if err := config.Load(&opts); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if opts.Reuse {
+		t.Error("expected Reuse=false when not set in config")
+	}
+}
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 func write(t *testing.T, path, content string) {

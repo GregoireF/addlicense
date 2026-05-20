@@ -54,21 +54,15 @@ Extended language support (HTML/Vue/Svelte, CSS/SCSS, proto, SQL), Docker GHCR, 
 ### v0.3.0 — 2026-05-20
 EU licence templates (EUPL-1.2, AGPL-3.0-only, LGPL-2.1/3.0-only). `--reuse` flag for FSFE/REUSE compliance. 90 %+ coverage, golangci-lint v2 config, full gofmt compliance. Contribution infrastructure: issue templates, PR template, CODEOWNERS, GitHub Wiki, Discussions.
 
+### v0.4.0 — (in progress)
+Header removal and power-user flags. `--remove` / `-R` strips existing headers; `--update` / `-u` replaces them in one pass. `--dry-run` / `-n` previews without writing. `--verbose` / `-v` and `--quiet` / `-q` control output verbosity. `--format json` emits JSON Lines for machine consumption. Parallel worker pool (`--workers`). `reuse:` field in `.addlicenserc.yaml`. Official `.pre-commit-hooks.yaml` (`addlicense-check` + `addlicense-add`). Mutual-exclusion validation for conflicting flags. 30+ new tests.
+
 ---
 
 ## Planned versions
 
-### v0.4.0 — Header removal and power-user flags
-
-- **`--remove` flag**: strip existing headers — needed when migrating between licences (MIT → EUPL-1.2, Apache-2.0 → AGPL-3.0). Detect the header block (already identified by the idempotence scan window), remove it, leave the rest of the file untouched.
-- **`--update` flag**: combine remove + inject in a single pass. The common migration workflow: `addlicense --update --license EUPL-1.2 .`
-- **`--verbose` / `--quiet` flags**: `--verbose` prints every file processed (not just injected ones); `--quiet` suppresses all stdout for pure CI usage (non-zero exit on error is still emitted to stderr).
-- **`--format json` output**: machine-readable report (file path, status: added/skipped/missing/error) for integration with other tools (dashboards, pre-commit hooks with structured output).
-- **Parallel file processing**: `filepath.WalkDir` with a worker pool (bounded goroutines) for large monorepos. Deferred until benchmarks justify it — sequential is under 1s for < 10 000 files; goroutine overhead is real.
-
 ### v0.5.0 — Ecosystem and DX
 
-- **Pre-commit hook support**: publish an official `.pre-commit-hooks.yaml` so `addlicense` can be added to [pre-commit](https://pre-commit.com/) without manual configuration.
 - **Native GitHub Action** (`action.yml`): no Docker pull, no binary download, instant cold start. Cross-compiles the binary and ships it inside the action repository on each release. Removes the 10 s Docker image pull from CI.
 - **Editor integration hints**: VS Code extension or devcontainer feature that runs `addlicense --check` in the background and highlights unlicensed files (out of scope for the binary itself, but documentation and integration guide).
 - **`--year-range` flag**: emit `Copyright 2024–2026 Author` for files that span multiple years. Useful for long-lived projects or when re-running addlicense years after initial injection.
@@ -87,7 +81,7 @@ EU licence templates (EUPL-1.2, AGPL-3.0-only, LGPL-2.1/3.0-only). `--reuse` fla
 
 **REUSE as default vs. opt-in** — `SPDX-FileCopyrightText:` is more future-proof and better aligned with the FSFE ecosystem, but breaks `grep -r "Copyright"` conventions. The `--reuse` flag preserves backward compatibility; making it the default would require a major version bump. Lean toward flag for now.
 
-**`--remove` heuristic** — the current scan window (top 20 lines, `SPDX-License-Identifier:` or `copyright`) reliably detects headers, but removing them requires knowing where the header ends. Heuristic: remove all consecutive comment lines from the top of the file (after shebang if present). Edge case: files where the first non-header line is also a comment. Needs a test matrix before shipping.
+**`--remove` heuristic** — resolved in v0.4.0: remove the leading comment block (after shebang if present) only when it contains `spdx-license-identifier` or `copyright`. Pure doc-comment blocks are left untouched. Test matrix covers line-comment, block-comment, shebang preservation, idempotence, and non-license-comment safety.
 
 **GitHub Action packaging** — a native action requires the binary to ship inside the action repository (no Docker). This adds complexity to the release pipeline (cross-compile + commit to action repo on each tag). The Docker action path is simpler but adds ~10 s of pull time per CI run. Decision deferred to v0.5.0.
 

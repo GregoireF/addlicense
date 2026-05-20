@@ -4,6 +4,8 @@
 package integration_test
 
 import (
+	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -415,6 +417,413 @@ func TestRun_Reuse_Idempotent(t *testing.T) {
 	if first != second {
 		t.Errorf("second reuse run modified the file:\nbefore:\n%s\nafter:\n%s", first, second)
 	}
+}
+
+// ── Remove mode ───────────────────────────────────────────────────────────────
+
+func TestRun_Remove_LineComment(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		"main.go": "// SPDX-License-Identifier: MIT\n// Copyright 2026 Grégoire\n\npackage main\n",
+	})
+	opts := config.Options{
+		Ignore: config.DefaultIgnore,
+		Paths:  []string{root},
+		Remove: true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, "main.go"))
+	if strings.Contains(content, "SPDX") || strings.Contains(content, "Copyright") {
+		t.Errorf("header should be removed:\n%s", content)
+	}
+	if !strings.Contains(content, "package main") {
+		t.Errorf("body should be preserved:\n%s", content)
+	}
+}
+
+func TestRun_Remove_BlockComment(t *testing.T) {
+	root := makeProject(t, map[string]string{})
+	htmlPath := filepath.Join(root, "index.html")
+	if err := os.WriteFile(htmlPath, []byte("<!--\nSPDX-License-Identifier: MIT\nCopyright 2026 Grégoire\n-->\n<html></html>\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	opts := config.Options{
+		Ignore: config.DefaultIgnore,
+		Paths:  []string{root},
+		Remove: true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, htmlPath)
+	if strings.Contains(content, "SPDX") {
+		t.Errorf("header should be removed:\n%s", content)
+	}
+	if !strings.Contains(content, "<html>") {
+		t.Errorf("body should be preserved:\n%s", content)
+	}
+}
+
+func TestRun_Remove_NoHeader_NoChange(t *testing.T) {
+	original := "package main\n\nfunc main() {}\n"
+	root := makeProject(t, map[string]string{"main.go": original})
+	opts := config.Options{
+		Ignore: config.DefaultIgnore,
+		Paths:  []string{root},
+		Remove: true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, "main.go"))
+	if content != original {
+		t.Errorf("file without header should be unchanged:\ngot:\n%s", content)
+	}
+}
+
+func TestRun_Remove_NonLicenseComment_NoChange(t *testing.T) {
+	original := "// Package main does something interesting.\n// It is purely documentary.\npackage main\n"
+	root := makeProject(t, map[string]string{"main.go": original})
+	opts := config.Options{
+		Ignore: config.DefaultIgnore,
+		Paths:  []string{root},
+		Remove: true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, "main.go"))
+	if content != original {
+		t.Errorf("non-license comment block should be unchanged:\ngot:\n%s", content)
+	}
+}
+
+// ── Update mode ───────────────────────────────────────────────────────────────
+
+func TestRun_Update_ReplaceHeader(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		"main.go": "// SPDX-License-Identifier: MIT\n// Copyright 2026 Grégoire\n\npackage main\n",
+	})
+	opts := config.Options{
+		License: "Apache-2.0",
+		Author:  "Grégoire",
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Update:  true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, "main.go"))
+	if strings.Contains(content, "SPDX-License-Identifier: MIT") {
+		t.Errorf("old MIT header should be replaced:\n%s", content)
+	}
+	if !strings.Contains(content, "SPDX-License-Identifier: Apache-2.0") {
+		t.Errorf("new Apache-2.0 header should be present:\n%s", content)
+	}
+	if !strings.Contains(content, "package main") {
+		t.Errorf("body should be preserved:\n%s", content)
+	}
+	if strings.Count(content, "SPDX-License-Identifier") > 1 {
+		t.Errorf("duplicate SPDX line detected:\n%s", content)
+	}
+}
+
+// ── Dry-run mode ──────────────────────────────────────────────────────────────
+
+func TestRun_DryRun_NoWrite(t *testing.T) {
+	original := "package main\n"
+	root := makeProject(t, map[string]string{"main.go": original})
+	opts := config.Options{
+		License: "MIT",
+		Author:  "Grégoire",
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		DryRun:  true,
+		Quiet:   true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, "main.go"))
+	if content != original {
+		t.Errorf("dry-run should not modify files:\ngot:\n%s", content)
+	}
+}
+
+func TestRun_DryRun_Remove(t *testing.T) {
+	original := "// SPDX-License-Identifier: MIT\n// Copyright 2026 Grégoire\n\npackage main\n"
+	root := makeProject(t, map[string]string{"main.go": original})
+	opts := config.Options{
+		Ignore: config.DefaultIgnore,
+		Paths:  []string{root},
+		Remove: true,
+		DryRun: true,
+		Quiet:  true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, "main.go"))
+	if content != original {
+		t.Errorf("dry-run --remove should not modify files:\ngot:\n%s", content)
+	}
+}
+
+// ── Mutually exclusive flags ───────────────────────────────────────────────────
+
+func TestRun_CheckAndRemoveConflict(t *testing.T) {
+	root := makeProject(t, map[string]string{"main.go": "package main\n"})
+	opts := config.Options{
+		Ignore:    config.DefaultIgnore,
+		Paths:     []string{root},
+		CheckOnly: true,
+		Remove:    true,
+	}
+	if err := runner.Run(opts); err == nil {
+		t.Error("--check --remove should return an error")
+	}
+}
+
+func TestRun_CheckAndUpdateConflict(t *testing.T) {
+	root := makeProject(t, map[string]string{"main.go": "package main\n"})
+	opts := config.Options{
+		License:   "MIT",
+		Ignore:    config.DefaultIgnore,
+		Paths:     []string{root},
+		CheckOnly: true,
+		Update:    true,
+	}
+	if err := runner.Run(opts); err == nil {
+		t.Error("--check --update should return an error")
+	}
+}
+
+func TestRun_VerboseAndQuietConflict(t *testing.T) {
+	root := makeProject(t, map[string]string{"main.go": "package main\n"})
+	opts := config.Options{
+		License: "MIT",
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Verbose: true,
+		Quiet:   true,
+	}
+	if err := runner.Run(opts); err == nil {
+		t.Error("--verbose --quiet should return an error")
+	}
+}
+
+func TestRun_RemoveAndUpdateConflict(t *testing.T) {
+	root := makeProject(t, map[string]string{"main.go": "package main\n"})
+	opts := config.Options{
+		Ignore: config.DefaultIgnore,
+		Paths:  []string{root},
+		Remove: true,
+		Update: true,
+	}
+	if err := runner.Run(opts); err == nil {
+		t.Error("--remove --update should return an error")
+	}
+}
+
+// ── Output format ─────────────────────────────────────────────────────────────
+
+func TestRun_Format_JSON(t *testing.T) {
+	root := makeProject(t, map[string]string{"main.go": "package main\n"})
+	opts := config.Options{
+		License: "MIT",
+		Author:  "Grégoire",
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Format:  "json",
+	}
+
+	out := captureStdout(t, func() {
+		if err := runner.Run(opts); err != nil {
+			t.Error(err)
+		}
+	})
+
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) == 0 || lines[0] == "" {
+		t.Fatal("expected at least one JSON line on stdout")
+	}
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		var rec struct {
+			File   string `json:"file"`
+			Status string `json:"status"`
+		}
+		if err := json.Unmarshal([]byte(line), &rec); err != nil {
+			t.Errorf("invalid JSON line %q: %v", line, err)
+			continue
+		}
+		if rec.File == "" {
+			t.Errorf("JSON record missing 'file' field: %s", line)
+		}
+		if rec.Status == "" {
+			t.Errorf("JSON record missing 'status' field: %s", line)
+		}
+	}
+}
+
+func TestRun_Format_Invalid(t *testing.T) {
+	root := makeProject(t, map[string]string{"main.go": "package main\n"})
+	opts := config.Options{
+		License: "MIT",
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Format:  "xml",
+	}
+	if err := runner.Run(opts); err == nil {
+		t.Error("--format xml should return an error")
+	}
+}
+
+func TestRun_Quiet_SuppressesStdout(t *testing.T) {
+	root := makeProject(t, map[string]string{"main.go": "package main\n"})
+	opts := config.Options{
+		License: "MIT",
+		Author:  "Grégoire",
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Quiet:   true,
+	}
+
+	out := captureStdout(t, func() {
+		if err := runner.Run(opts); err != nil {
+			t.Error(err)
+		}
+	})
+
+	if strings.TrimSpace(out) != "" {
+		t.Errorf("--quiet should suppress stdout, got:\n%s", out)
+	}
+}
+
+func TestRun_Verbose_ShowsSkippedFiles(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		"main.go": "// SPDX-License-Identifier: MIT\n// Copyright 2026 Grégoire\npackage main\n",
+	})
+	opts := config.Options{
+		License: "MIT",
+		Author:  "Grégoire",
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Verbose: true,
+	}
+
+	out := captureStdout(t, func() {
+		if err := runner.Run(opts); err != nil {
+			t.Error(err)
+		}
+	})
+
+	if !strings.Contains(out, "skipped") && !strings.Contains(out, "ok") {
+		t.Errorf("--verbose should report already-licensed files, got:\n%s", out)
+	}
+}
+
+// ── Parallel processing ───────────────────────────────────────────────────────
+
+func TestRun_Parallel_MultipleFiles(t *testing.T) {
+	files := make(map[string]string, 20)
+	for i := 0; i < 20; i++ {
+		files[strings.Repeat("a", i+1)+".go"] = "package main\n"
+	}
+	root := makeProject(t, files)
+	opts := config.Options{
+		License: "MIT",
+		Author:  "Grégoire",
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Workers: 4,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	for rel := range files {
+		content := readFile(t, filepath.Join(root, rel))
+		if !strings.Contains(content, "SPDX-License-Identifier: MIT") {
+			t.Errorf("%s: missing header", rel)
+		}
+	}
+}
+
+func TestRun_Workers_SingleWorker(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		"a.go": "package a\n",
+		"b.go": "package b\n",
+	})
+	opts := config.Options{
+		License: "MIT",
+		Author:  "Grégoire",
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Workers: 1,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"a.go", "b.go"} {
+		if !strings.Contains(readFile(t, filepath.Join(root, rel)), "SPDX") {
+			t.Errorf("%s: missing header", rel)
+		}
+	}
+}
+
+// ── Config reuse from file ────────────────────────────────────────────────────
+
+func TestRun_Config_ReuseFromFile(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		"main.go":            "package main\n",
+		".addlicenserc.yaml": "license: MIT\nauthor: Grégoire\nyear: 2026\nreuse: true\n",
+	})
+	opts := config.Options{Ignore: config.DefaultIgnore, Paths: []string{root}}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, "main.go"))
+	if !strings.Contains(content, "SPDX-FileCopyrightText:") {
+		t.Errorf("reuse: true in config should emit SPDX-FileCopyrightText:\n%s", content)
+	}
+	if strings.Contains(content, "Copyright 2026") {
+		t.Errorf("should not contain plain 'Copyright 2026' in reuse mode:\n%s", content)
+	}
+}
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+// captureStdout runs fn while redirecting os.Stdout to a pipe, then returns what was written.
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := os.Stdout
+	os.Stdout = w
+
+	fn()
+
+	w.Close()
+	os.Stdout = old
+
+	out, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(out)
 }
 
 // ── Multiple roots ────────────────────────────────────────────────────────────

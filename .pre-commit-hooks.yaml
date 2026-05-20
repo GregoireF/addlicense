@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Grégoire Favreau
+
+# Usage in .pre-commit-config.yaml:
+#
+#   repos:
+#     - repo: https://github.com/GregoireF/addlicense
+#       rev: v0.4.0
+#       hooks:
+#         - id: addlicense-check
+#         # optionally add args: [--license, MIT, --author, "Your Name"]
+#         # or rely on .addlicenserc.yaml in the repository root.
+
+- id: addlicense-check
+  name: Check license headers
+  description: >
+    Exit non-zero if any tracked source file is missing a SPDX-compatible
+    license header. Does not modify files.
+  entry: addlicense --check
+  language: golang
+  pass_filenames: false
+  always_run: true
+
+- id: addlicense-add
+  name: Add license headers
+  description: >
+    Inject missing SPDX-compatible license headers. Requires --license and
+    --author in args, or a .addlicenserc.yaml file in the repository root.
+  entry: addlicense
+  language: golang
+  pass_filenames: false
+  always_run: true

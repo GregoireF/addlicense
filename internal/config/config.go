@@ -27,6 +27,13 @@ type Options struct {
 	Paths     []string
 	CheckOnly bool
 	Reuse     bool // emit SPDX-FileCopyrightText: instead of Copyright
+	Remove    bool // strip existing license headers
+	Update    bool // remove existing header then inject new one
+	DryRun    bool // preview changes without writing
+	Verbose   bool // print skipped/ok files in addition to modified ones
+	Quiet     bool // suppress all stdout; errors still go to stderr
+	Format    string // output format: "text" (default) or "json"
+	Workers   int    // parallel workers; 0 = runtime.NumCPU()
 }
 
 // fileConfig is the shape of .addlicenserc.yaml / .addlicenserc.json.
@@ -35,6 +42,7 @@ type fileConfig struct {
 	Author  string   `yaml:"author"`
 	Ignore  []string `yaml:"ignore"`
 	Year    int      `yaml:"year"`
+	Reuse   bool     `yaml:"reuse"`
 }
 
 // Load merges file config into opts; CLI flags already set on opts take precedence.
@@ -77,6 +85,9 @@ func merge(opts *Options, fc *fileConfig) {
 	}
 	if opts.Year == 0 && fc.Year != 0 {
 		opts.Year = fc.Year
+	}
+	if !opts.Reuse && fc.Reuse {
+		opts.Reuse = true
 	}
 }
 

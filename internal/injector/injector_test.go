@@ -161,6 +161,164 @@ func TestHasHeader_CaseInsensitive(t *testing.T) {
 	}
 }
 
+// ── Remove ────────────────────────────────────────────────────────────────────
+
+func TestRemove_LineComment_RemovesHeader(t *testing.T) {
+	content := "// SPDX-License-Identifier: MIT\n// Copyright 2026 Grégoire\n\npackage main\n\nfunc main() {}\n"
+	path := writeTemp(t, content)
+
+	changed, err := injector.Remove(path, "//", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !changed {
+		t.Fatal("expected changed=true")
+	}
+
+	got, _ := os.ReadFile(path)
+	result := string(got)
+	if strings.Contains(result, "SPDX") || strings.Contains(result, "Copyright") {
+		t.Errorf("header still present:\n%s", result)
+	}
+	if !strings.Contains(result, "package main") {
+		t.Errorf("body was removed:\n%s", result)
+	}
+}
+
+func TestRemove_LineComment_PreservesShebang(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "script.sh")
+	content := "#!/usr/bin/env bash\n# SPDX-License-Identifier: MIT\n# Copyright 2026 Grégoire\n\necho hello\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err := injector.Remove(path, "#", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !changed {
+		t.Fatal("expected changed=true")
+	}
+
+	got, _ := os.ReadFile(path)
+	result := string(got)
+	if !strings.HasPrefix(result, "#!/usr/bin/env bash\n") {
+		t.Errorf("shebang not preserved:\n%s", result)
+	}
+	if strings.Contains(result, "SPDX") {
+		t.Errorf("SPDX line still present:\n%s", result)
+	}
+}
+
+func TestRemove_LineComment_NoHeader_NoChange(t *testing.T) {
+	content := "package main\n\nfunc main() {}\n"
+	path := writeTemp(t, content)
+
+	changed, err := injector.Remove(path, "//", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed {
+		t.Error("expected changed=false for file without header")
+	}
+
+	got, _ := os.ReadFile(path)
+	if string(got) != content {
+		t.Error("file should be unmodified")
+	}
+}
+
+func TestRemove_LineComment_NonLicenseComment_NoChange(t *testing.T) {
+	content := "// Package main does something.\n// It is not a license.\npackage main\n"
+	path := writeTemp(t, content)
+
+	changed, err := injector.Remove(path, "//", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed {
+		t.Error("non-license comment block must not be removed")
+	}
+}
+
+func TestRemove_BlockComment_HTML(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "index.html")
+	content := "<!--\nSPDX-License-Identifier: MIT\nCopyright 2026 Grégoire\n-->\n<html></html>\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err := injector.Remove(path, "", "<!--", "-->")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !changed {
+		t.Fatal("expected changed=true")
+	}
+
+	got, _ := os.ReadFile(path)
+	result := string(got)
+	if strings.Contains(result, "SPDX") {
+		t.Errorf("header still present:\n%s", result)
+	}
+	if !strings.Contains(result, "<html>") {
+		t.Errorf("body was removed:\n%s", result)
+	}
+}
+
+func TestRemove_BlockComment_CSS(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "style.css")
+	content := "/* SPDX-License-Identifier: MIT\n   Copyright 2026 Grégoire */\nbody { margin: 0; }\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	changed, err := injector.Remove(path, "", "/*", "*/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !changed {
+		t.Fatal("expected changed=true")
+	}
+
+	got, _ := os.ReadFile(path)
+	result := string(got)
+	if strings.Contains(result, "SPDX") {
+		t.Errorf("header still present:\n%s", result)
+	}
+	if !strings.Contains(result, "body") {
+		t.Errorf("body was removed:\n%s", result)
+	}
+}
+
+func TestRemove_Idempotent(t *testing.T) {
+	content := "// SPDX-License-Identifier: MIT\n// Copyright 2026 Grégoire\n\npackage main\n"
+	path := writeTemp(t, content)
+
+	changed1, err := injector.Remove(path, "//", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !changed1 {
+		t.Fatal("first Remove should change the file")
+	}
+
+	changed2, err := injector.Remove(path, "//", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed2 {
+		t.Error("second Remove should be a no-op (idempotent)")
+	}
+}
+
+func TestRemove_NonExistentFile_Error(t *testing.T) {
+	_, err := injector.Remove(nonexistentPath(t), "//", "", "")
+	if err == nil {
+		t.Error("expected error for nonexistent file, got nil")
+	}
+}
+
 // nonexistentPath returns a path guaranteed not to exist.
 func nonexistentPath(t *testing.T) string {
 	t.Helper()

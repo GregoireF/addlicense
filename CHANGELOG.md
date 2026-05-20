@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] — Unreleased
+
+### Added
+
+- **`--remove` / `-R` flag** — strips existing license headers from files. Detection uses the same heuristic as the idempotence check (top-20-line scan for `spdx-license-identifier` or `copyright`); only comment blocks that contain a license marker are removed — non-license comment blocks (package docs, etc.) are left untouched. Handles both line-comment (`//`, `#`, `--`) and block-comment (`<!-- -->`, `/* */`) styles.
+- **`--update` / `-u` flag** — replaces the existing header with a new one in a single pass (`--remove` + inject). The canonical migration workflow: `addlicense --update --license EUPL-1.2 .`
+- **`--dry-run` / `-n` flag** — previews changes without writing to disk. Emits `[dry-run] would-add: <path>`, `[dry-run] would-remove: <path>`, `[dry-run] would-update: <path>` for every file that would be affected.
+- **`--verbose` / `-v` flag** — prints every processed file, including already-licensed ones (`skipped` / `ok`), in addition to the default modified-file output.
+- **`--quiet` / `-q` flag** — suppresses all stdout; errors still go to stderr. Designed for pure CI pipelines where only the exit code matters.
+- **`--format` / `-f` flag** — selects output format: `text` (default, human-readable) or `json` (JSON Lines: `{"file":"…","status":"…","error":"…"}`). The string flag is extensible to future formats without breaking the CLI contract.
+- **`--workers` flag** — controls the number of parallel goroutines (default: `runtime.NumCPU()`). Files are processed concurrently via a buffered jobs channel and a `sync.WaitGroup`-managed worker pool, bounded to `min(workers, len(files))`.
+- **`reuse:` field in `.addlicenserc.yaml`** — `reuse: true` in the config file now activates REUSE/FSFE mode without requiring the `--reuse` flag on every invocation. CLI flag takes precedence per the usual merge order.
+- **`.pre-commit-hooks.yaml`** — official [pre-commit](https://pre-commit.com/) hook definitions shipped in the repository root. Two hooks: `addlicense-check` (exit 1 on missing headers, read-only) and `addlicense-add` (inject missing headers). Language is `golang`; pre-commit installs the binary automatically via `go install`. Both hooks set `pass_filenames: false` and `always_run: true`.
+- **Extended test suite**:
+  - `internal/injector`: 8 new unit tests covering `Remove` — line-comment removal, shebang preservation, idempotence, non-license-comment safety, block-comment HTML/CSS styles, nonexistent-file error.
+  - `internal/config`: 3 new unit tests covering `reuse:` merge — from config file, CLI precedence, default false.
+  - `tests/integration/`: 20 new integration tests covering `--remove`, `--update`, `--dry-run`, `--quiet`, `--verbose`, `--format json`, `--workers`, `--format xml` (invalid), all mutual-exclusion flag combinations, `reuse:` from config file, and parallel processing across 20 files.
+
+### Changed
+
+- **Mutual exclusion validation** (`validateOpts`): `--verbose` ⊕ `--quiet`, `--check` ⊕ (`--remove` ∨ `--update`), `--remove` ⊕ `--update` — all return descriptive errors before any file I/O.
+- **Runner refactored** into `runParallel` + `processFile` + per-mode functions (`checkFile`, `addFile`, `removeFile`, `updateFile`) to keep cyclomatic complexity under the gocyclo-15 limit.
+
+---
+
 ## [0.3.0] — 2026-05-20
 
 ### Added

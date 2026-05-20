@@ -16,6 +16,13 @@ inputs:
       (useful when you want to call addlicense manually in a subsequent step).
     required: false
     default: '--check .'
+  version:
+    description: >
+      Override the release version to download (e.g. "v0.5.0").
+      Defaults to the action tag (github.action_ref).
+      Set this when testing the action with uses: ./ from a branch.
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -39,10 +46,16 @@ runs:
     - name: Download and install addlicense
       shell: bash
       env:
-        VERSION: ${{ github.action_ref }}
-        OS:      ${{ steps.platform.outputs.os }}
-        ARCH:    ${{ steps.platform.outputs.arch }}
+        VERSION_INPUT: ${{ inputs.version }}
+        ACTION_REF:    ${{ github.action_ref }}
+        OS:            ${{ steps.platform.outputs.os }}
+        ARCH:          ${{ steps.platform.outputs.arch }}
       run: |
+        VERSION="${VERSION_INPUT:-$ACTION_REF}"
+        if [[ ! "$VERSION" =~ ^v[0-9] ]]; then
+          echo "::error::Cannot determine release version from '${VERSION}'. Set the 'version' input explicitly." >&2
+          exit 1
+        fi
         dest="${RUNNER_TEMP}/addlicense-bin"
         mkdir -p "$dest"
 

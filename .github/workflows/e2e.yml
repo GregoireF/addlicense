@@ -1,0 +1,116 @@
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Grégoire Favreau
+name: E2E
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version to test (e.g. v0.5.0)'
+        required: false
+        default: 'v0.5.0'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Smoke / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Resolve version
+        id: ver
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "version=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Test the action itself using uses: ./ with an explicit version override
+      - name: Install via action (action self-test)
+        uses: ./
+        with:
+          version: ${{ steps.ver.outputs.version }}
+          args: ''
+
+      - name: --version
+        shell: bash
+        run: addlicense --version
+
+      - name: --help
+        shell: bash
+        run: addlicense --help
+
+      - name: Prepare test project
+        shell: bash
+        run: |
+          mkdir -p smoke
+          printf 'package main\n'   > smoke/main.go
+          printf 'const x = 1;\n'  > smoke/app.ts
+          printf '# config\n'      > smoke/config.yml
+
+      - name: Add MIT headers
+        shell: bash
+        run: addlicense --license MIT --author "CI" smoke/
+
+      - name: Check headers present (exit 0)
+        shell: bash
+        run: addlicense --check smoke/
+
+      - name: JSON output format
+        shell: bash
+        run: addlicense --format json --check smoke/ | grep '"status"'
+
+      - name: Remove headers
+        shell: bash
+        run: addlicense --remove smoke/
+
+      - name: Check headers absent (exit 1)
+        shell: bash
+        run: addlicense --check smoke/ && exit 1 || true
+
+      - name: Dry-run does not write
+        shell: bash
+        run: |
+          addlicense --license MIT --author CI --dry-run smoke/
+          addlicense --check smoke/ && exit 1 || true
+
+      - name: --year-range preserves original year
+        shell: bash
+        run: |
+          printf '// Copyright 2020 CI\n// SPDX-License-Identifier: MIT\n\npackage main\n' \
+            > smoke/old.go
+          addlicense --license MIT --author CI --update --year-range smoke/old.go
+          grep "2020-" smoke/old.go
+
+      - name: --dep5 generates .reuse/dep5
+        shell: bash
+        run: |
+          printf '\x89PNG\r\n' > smoke/logo.png
+          addlicense --license MIT --author CI --dep5 smoke/
+          test -f smoke/.reuse/dep5
+          grep "logo.png" smoke/.reuse/dep5
+
+      - name: --reuse emits SPDX-FileCopyrightText
+        shell: bash
+        run: |
+          printf 'package reuse\n' > smoke/reuse.go
+          addlicense --license MIT --author CI --reuse smoke/reuse.go
+          grep "SPDX-FileCopyrightText" smoke/reuse.go
+
+      - name: Mutual exclusion returns exit 1
+        shell: bash
+        run: |
+          addlicense --verbose --quiet smoke/ && exit 1 || true
+          addlicense --check --remove smoke/ && exit 1 || true

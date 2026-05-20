@@ -1062,6 +1062,106 @@ func TestRun_NoFilesToProcess(t *testing.T) {
 
 // ── Multiple roots ────────────────────────────────────────────────────────────
 
+// ── --year-range ──────────────────────────────────────────────────────────────
+
+func TestRun_YearRange_PreservesOriginalYear(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		testMainGo: "// SPDX-License-Identifier: MIT\n// Copyright 2023 " + testAuthor + "\n\n" + testBody,
+	})
+	opts := config.Options{
+		License:   testLicense,
+		Author:    testAuthor,
+		Year:      2026,
+		Update:    true,
+		YearRange: true,
+		Ignore:    config.DefaultIgnore,
+		Paths:     []string{root},
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, testMainGo))
+	if !strings.Contains(content, "2023-2026") {
+		t.Errorf("expected year range 2023-2026 in header:\n%s", content)
+	}
+}
+
+func TestRun_YearRange_SameYear_NoRange(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		testMainGo: "// SPDX-License-Identifier: MIT\n// Copyright 2026 " + testAuthor + "\n\n" + testBody,
+	})
+	opts := config.Options{
+		License:   testLicense,
+		Author:    testAuthor,
+		Year:      2026,
+		Update:    true,
+		YearRange: true,
+		Ignore:    config.DefaultIgnore,
+		Paths:     []string{root},
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, testMainGo))
+	if strings.Contains(content, "2026-2026") {
+		t.Errorf("should not emit range when years are equal:\n%s", content)
+	}
+	if !strings.Contains(content, "Copyright 2026") {
+		t.Errorf("expected single year copyright:\n%s", content)
+	}
+}
+
+func TestRun_YearRange_NoExistingHeader_NoRange(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		testMainGo: testBody,
+	})
+	opts := config.Options{
+		License:   testLicense,
+		Author:    testAuthor,
+		Year:      2026,
+		Update:    true,
+		YearRange: true,
+		Ignore:    config.DefaultIgnore,
+		Paths:     []string{root},
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, testMainGo))
+	if strings.Contains(content, "Copyright 2026-") {
+		t.Errorf("should not emit year range when no original header:\n%s", content)
+	}
+	if !strings.Contains(content, "Copyright 2026") {
+		t.Errorf("expected single year copyright:\n%s", content)
+	}
+}
+
+func TestRun_YearRange_Reuse_PreservesOriginalYear(t *testing.T) {
+	root := makeProject(t, map[string]string{
+		testMainGo: "// SPDX-FileCopyrightText: 2022 " + testAuthor + "\n// SPDX-License-Identifier: MIT\n\n" + testBody,
+	})
+	opts := config.Options{
+		License:   testLicense,
+		Author:    testAuthor,
+		Year:      2026,
+		Update:    true,
+		YearRange: true,
+		Reuse:     true,
+		Ignore:    config.DefaultIgnore,
+		Paths:     []string{root},
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, testMainGo))
+	if !strings.Contains(content, "2022-2026") {
+		t.Errorf("expected REUSE year range 2022-2026 in header:\n%s", content)
+	}
+	if !strings.Contains(content, "SPDX-FileCopyrightText:") {
+		t.Errorf("expected REUSE prefix in header:\n%s", content)
+	}
+}
+
 func TestRun_MultipleRoots(t *testing.T) {
 	rootA := makeProject(t, map[string]string{"a.go": "package a\n"})
 	rootB := makeProject(t, map[string]string{"b.go": "package b\n"})

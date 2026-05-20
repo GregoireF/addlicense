@@ -34,6 +34,7 @@ type Options struct {
 	Quiet     bool   // suppress all stdout; errors still go to stderr
 	Format    string // output format: "text" (default) or "json"
 	Workers   int    // parallel workers; 0 = runtime.NumCPU()
+	YearRange bool   // emit "YYYY-YYYY" copyright range when updating files with an existing year
 }
 
 // fileConfig is the shape of .addlicenserc.yaml / .addlicenserc.json.

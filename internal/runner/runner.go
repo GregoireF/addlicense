@@ -79,7 +79,7 @@ func Run(opts config.Options) error {
 		Author:        opts.Author,
 		License:       opts.License,
 		SPDX:          header.SPDX(opts.License),
-		CopyrightLine: buildCopyrightLine(opts.Year, opts.Author, opts.Reuse),
+		CopyrightLine: buildCopyrightLine(0, opts.Year, opts.Author, opts.Reuse),
 	}
 
 	results := runParallel(files, opts, hData, tmplText, cwd)
@@ -154,7 +154,7 @@ func processFile(f scanner.File, opts config.Options, hData header.Data, tmplTex
 	case opts.CheckOnly:
 		return checkFile(rel, f.Path)
 	case opts.Update:
-		return updateFile(rel, f.Path, lang, hData, tmplText, opts.DryRun)
+		return updateFile(rel, f.Path, lang, hData, tmplText, opts.DryRun, opts.YearRange, opts.Reuse)
 	case opts.Remove:
 		return removeFile(rel, f.Path, lang, opts.DryRun)
 	default:
@@ -194,7 +194,7 @@ func removeFile(rel, path string, lang *header.Lang, dryRun bool) fileResult {
 	return fileResult{Path: rel, Action: actionRemoved}
 }
 
-func updateFile(rel, path string, lang *header.Lang, hData header.Data, tmplText string, dryRun bool) fileResult {
+func updateFile(rel, path string, lang *header.Lang, hData header.Data, tmplText string, dryRun, yearRange, reuse bool) fileResult {
 	if dryRun {
 		has, err := injector.HasHeader(path)
 		if err != nil {
@@ -204,6 +204,11 @@ func updateFile(rel, path string, lang *header.Lang, hData header.Data, tmplText
 			return fileResult{Path: rel, Action: actionWouldUpdate}
 		}
 		return fileResult{Path: rel, Action: actionWouldAdd}
+	}
+	if yearRange {
+		if from := injector.ExtractYear(path); from > 0 && from < hData.Year {
+			hData.CopyrightLine = buildCopyrightLine(from, hData.Year, hData.Author, reuse)
+		}
 	}
 	changed, err := injector.Remove(path, lang.LineComment, lang.BlockOpen, lang.BlockClose)
 	if err != nil {
@@ -305,12 +310,16 @@ func emit(r fileResult, useJSON bool, enc *json.Encoder, verbose, quiet bool) {
 	}
 }
 
-func buildCopyrightLine(year int, author string, reuse bool) string {
+func buildCopyrightLine(fromYear, year int, author string, reuse bool) string {
 	prefix := "Copyright"
 	if reuse {
 		prefix = "SPDX-FileCopyrightText:"
 	}
-	line := fmt.Sprintf("%s %d", prefix, year)
+	yearStr := fmt.Sprintf("%d", year)
+	if fromYear > 0 && fromYear < year {
+		yearStr = fmt.Sprintf("%d-%d", fromYear, year)
+	}
+	line := fmt.Sprintf("%s %s", prefix, yearStr)
 	if author != "" {
 		line += " " + author
 	}

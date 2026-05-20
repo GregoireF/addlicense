@@ -391,6 +391,47 @@ func TestRemove_BlockComment_NoOpenAtStart_NoChange(t *testing.T) {
 	}
 }
 
+// ── ExtractYear ───────────────────────────────────────────────────────────────
+
+func TestExtractYear_Copyright(t *testing.T) {
+	path := writeTemp(t, "// Copyright 2023 Author\n// SPDX-License-Identifier: MIT\npackage main\n")
+	if got := injector.ExtractYear(path); got != 2023 {
+		t.Errorf("expected 2023, got %d", got)
+	}
+}
+
+func TestExtractYear_SPDXFileCopyrightText(t *testing.T) {
+	path := writeTemp(t, "// SPDX-FileCopyrightText: 2021 Author\npackage main\n")
+	if got := injector.ExtractYear(path); got != 2021 {
+		t.Errorf("expected 2021, got %d", got)
+	}
+}
+
+func TestExtractYear_NoYear(t *testing.T) {
+	path := writeTemp(t, "package main\nfunc main() {}\n")
+	if got := injector.ExtractYear(path); got != 0 {
+		t.Errorf("expected 0 for file without year, got %d", got)
+	}
+}
+
+func TestExtractYear_FileNotFound(t *testing.T) {
+	if got := injector.ExtractYear(nonexistentPath(t)); got != 0 {
+		t.Errorf("expected 0 for missing file, got %d", got)
+	}
+}
+
+func TestExtractYear_BeyondScanWindow(t *testing.T) {
+	var b strings.Builder
+	for i := 0; i < 21; i++ {
+		b.WriteString("// line\n")
+	}
+	b.WriteString("// Copyright 2019 Someone\n")
+	path := writeTemp(t, b.String())
+	if got := injector.ExtractYear(path); got != 0 {
+		t.Errorf("expected 0 (year past scan window), got %d", got)
+	}
+}
+
 // nonexistentPath returns a path guaranteed not to exist.
 func nonexistentPath(t *testing.T) string {
 	t.Helper()

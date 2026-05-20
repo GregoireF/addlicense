@@ -5,14 +5,39 @@ package injector
 
 import (
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 )
+
+var yearRe = regexp.MustCompile(`(?i)(?:copyright|spdx-filecopyrighttext:)\s+(\d{4})`)
 
 const (
 	scanLines    = 20
 	spdxKey      = "spdx-license-identifier"
 	copyrightKey = "copyright"
 )
+
+// ExtractYear reads the first scanLines lines of path and returns the first four-digit
+// year found after a "copyright" or "SPDX-FileCopyrightText:" marker. Returns 0 on
+// failure or when no year is found.
+func ExtractYear(path string) int {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0
+	}
+	lines := strings.SplitN(string(data), "\n", scanLines+1)
+	if len(lines) > scanLines {
+		lines = lines[:scanLines]
+	}
+	for _, line := range lines {
+		if m := yearRe.FindStringSubmatch(line); m != nil {
+			y, _ := strconv.Atoi(m[1])
+			return y
+		}
+	}
+	return 0
+}
 
 // HasHeader reports whether the file already contains a license header.
 // It checks the first scanLines lines for SPDX identifiers or copyright notices.

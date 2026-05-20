@@ -63,6 +63,9 @@ Examples:
 	// Performance
 	root.Flags().IntVar(&opts.Workers, "workers", 0, "Parallel workers (default: number of CPUs)")
 
+	// Header management
+	root.Flags().BoolVar(&opts.YearRange, "year-range", false, "Preserve original copyright year when updating (emits \"YYYY-YYYY\" range)")
+
 	root.SetVersionTemplate(fmt.Sprintf("addlicense %s\nbuild: %s @ %s\n", version, commit, date))
 
 	return root

@@ -10,8 +10,24 @@
 | `--template` | `-t` | string | — | Path to a custom Go template file. Overrides the built-in template for the chosen licence. |
 | `--ignore` | `-i` | string | see below | Comma-separated glob patterns to skip. Merged with the default list. |
 | `--check` | `-c` | bool | false | Check mode. No files are modified. Exits 1 with a list of missing files if any are unlicensed. |
-| `--reuse` | `-r` | bool | false | REUSE/FSFE mode. Emits `SPDX-FileCopyrightText:` instead of `Copyright`. |
+| `--remove` | `-R` | bool | false | Strip existing license headers. Only removes blocks containing `SPDX-License-Identifier` or `copyright`. |
+| `--update` | `-u` | bool | false | Replace existing headers (`--remove` + inject). Canonical migration workflow. |
+| `--dry-run` | `-n` | bool | false | Preview changes without writing to disk. Prints `[dry-run] would-add/remove/update: <path>`. |
+| `--verbose` | `-v` | bool | false | Print every file, including already-licensed ones (`skipped` / `ok`). |
+| `--quiet` | `-q` | bool | false | Suppress all stdout. Errors still go to stderr. |
+| `--format` | `-f` | string | `text` | Output format: `text` or `json` (JSON Lines: `{"file":"…","status":"…","error":"…"}`). |
+| `--workers` | | int | `runtime.NumCPU()` | Number of parallel goroutines for file processing. |
+| `--reuse` | `-r` | bool | false | REUSE/FSFE mode. Emits `SPDX-FileCopyrightText:` instead of `Copyright`. Also available in config file. |
 | `--version` | | | | Prints version, commit, and build date. |
+
+### Mutually exclusive flag combinations
+
+| Combination | Error |
+| :-- | :-- |
+| `--verbose` + `--quiet` | `--verbose and --quiet are mutually exclusive` |
+| `--check` + `--remove` | `--check cannot be combined with --remove or --update` |
+| `--check` + `--update` | `--check cannot be combined with --remove or --update` |
+| `--remove` + `--update` | `--remove and --update are mutually exclusive; --update implies removal` |
 
 ## Default ignore list
 
@@ -47,6 +63,7 @@ The file is resolved relative to the first path argument, then the working direc
 license: MIT           # string — SPDX identifier
 author: Acme Corp      # string — copyright holder
 year: 2026             # int — copyright year (defaults to current year)
+reuse: false           # bool — emit SPDX-FileCopyrightText: instead of Copyright
 ignore:                # list of glob patterns (merged with defaults)
   - vendor
   - node_modules
@@ -74,7 +91,7 @@ ignore:                # list of glob patterns (merged with defaults)
 | `year` | CLI flag wins, then config file, then `time.Now().Year()` |
 | `ignore` | CLI `--ignore` replaces the config list entirely (not merged) |
 | `--check` | CLI only — not available in config file |
-| `--reuse` | CLI only — not available in config file |
+| `reuse` | CLI `--reuse` wins; config `reuse: true` sets it when flag is not passed |
 
 ## Custom template
 

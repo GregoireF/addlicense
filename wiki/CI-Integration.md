@@ -103,22 +103,46 @@ license-check:
 
 ## pre-commit
 
-Until an official `.pre-commit-hooks.yaml` is published (planned for v0.5.0), use the `local` hook type:
+addlicense ships an official `.pre-commit-hooks.yaml` since v0.4.0. pre-commit installs the binary automatically via `go install` — no manual setup required.
+
+### Check mode (recommended for most teams)
 
 ```yaml
 # .pre-commit-config.yaml
 repos:
-  - repo: local
+  - repo: https://github.com/GregoireF/addlicense
+    rev: v0.4.0
     hooks:
       - id: addlicense-check
-        name: Check license headers
-        entry: addlicense --check
-        language: system
-        pass_filenames: false
-        types_or: [go, python, javascript, typescript, java, rust]
+        # optionally pass flags; or rely on .addlicenserc.yaml
+        # args: [--license, MIT, --author, "Your Name"]
 ```
 
-This requires `addlicense` to be installed on the developer's machine (e.g. via Homebrew).
+This hook exits non-zero if any tracked source file is missing a header. It does **not** modify files, making it safe for all CI runners.
+
+### Auto-add mode
+
+```yaml
+repos:
+  - repo: https://github.com/GregoireF/addlicense
+    rev: v0.4.0
+    hooks:
+      - id: addlicense-add
+        args: [--license, MIT, --author, "Your Name"]
+```
+
+This hook injects missing headers before the commit is finalised. If you use a config file (`.addlicenserc.yaml`), you can omit the `args`.
+
+### Using both hooks
+
+```yaml
+repos:
+  - repo: https://github.com/GregoireF/addlicense
+    rev: v0.4.0
+    hooks:
+      - id: addlicense-add   # inject first
+      - id: addlicense-check # then verify
+```
 
 ---
 

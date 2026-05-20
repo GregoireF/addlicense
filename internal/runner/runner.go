@@ -326,7 +326,7 @@ func writeDep5(files []scanner.File, opts config.Options, cwd string) error {
 		}
 	}
 
-	var unhandled []string
+	unhandled := make([]string, 0, len(files))
 	for _, f := range files {
 		if header.LangFor(f.Ext) != nil {
 			continue

@@ -108,6 +108,10 @@ addlicense --ignore "dist,vendor,*.gen.go" .
 
 **Default ignore list:** `vendor`, `node_modules`, `.git`, `dist`, `build`, `*.pb.go`, `*.gen.go`
 
+**`--ignore` matching rules:** Each pattern is tested as a glob against the file name and each path segment (e.g. `vendor` ignores any file under a `vendor/` directory at any depth). Patterns without wildcards also match as substrings of the full path (e.g. `generated` matches `auto_generated.go`). Glob patterns like `*.pb.go` use standard shell globbing.
+
+**Multi-author with `--update`:** `--update` replaces the entire existing header with the new one. If `--author "Alice, Bob"` is set, the result is two copyright lines for Alice and Bob — the previous author is not preserved. To keep an existing author, include them in the `--author` list.
+
 ---
 
 ## Supported languages

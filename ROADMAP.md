@@ -63,29 +63,35 @@ Ecosystem integrations. `--year-range` preserves the original copyright year dur
 ### v0.6.0 — 2026-05-22
 Multi-author and diff. `--author "Alice, Bob"` emits one copyright line per author, composable with `--reuse` and `--year-range`. `--diff` emits JSON Lines with the rendered header for each file that would change (no writes; exit 1 if any file would be modified) — designed for PR validation and compliance review without destructive writes. Quality: injector and pipeline benchmark suites, `SilenceErrors` fix (error no longer printed twice). 9 new integration tests, 4 new CLI tests.
 
+### v0.7.0 — 2026-05-22
+Security and correctness. `injector.Inject` and `injector.Remove` now preserve original file permissions — executable scripts (`chmod +x`) no longer silently lose their execute bit after a run. Coverage raised from 89.1% to 90.4% by covering `diffFile` error paths and removing dead code in `emit`. `--ignore` and multi-author `--update` semantics documented.
+
 ---
 
 ## Planned versions
 
 ---
 
-### v0.7.0 — Public API and SBOM groundwork
+### v0.8.0 — Public API
 
-**Target:** next minor release after v0.6.0. Focuses on making addlicense embeddable as a library.
-
-#### Error message audit (carry-over)
-
-Review remaining user-facing messages for consistency and actionability. The double-print regression (Cobra + main both printing) was fixed in v0.6.0; this milestone audits the remaining messages.
+**Target:** next minor release after v0.7.0. Makes addlicense embeddable as a library and lays the groundwork for v1.0.0 API freeze.
 
 #### Public Go API (`pkg/`)
 
-**What:** Expose `github.com/GregoireF/addlicense/pkg` with a stable, documented interface. Promotes mature `internal/` packages to public surface.
+**What:** Expose `github.com/GregoireF/addlicense/pkg` with a stable, documented interface. Clean public types (`pkg.Options`, `pkg.Run`) backed by the mature `internal/` implementation.
 
-**Justification:** The internals (injector, scanner, header) are stable. Making them public removes subprocess overhead for IDE plugins, CI runners, and code generators that embed addlicense programmatically.
+**Justification:** The internals (injector, scanner, header, runner) are now stable and well-tested (90%+ coverage). Making a `pkg/` surface removes subprocess overhead for IDE plugins, CI runners, and code generators.
 
-#### Multi-author `--update` merge semantics
+**Design decision:** `pkg.Options` will be a distinct struct (not a type alias for `config.Options`) to allow internal evolution without breaking the public API. A thin conversion layer maps `pkg.Options → config.Options` internally.
 
-**What:** When `--update` is combined with multi-author, decide whether to append new authors to existing lines or replace. Currently `--update` in multi-author mode replaces all copyright lines. Define and document the merge policy.
+**Pros:**
+- Clean API boundary; internal packages can refactor freely.
+- `pkg.go.dev` documentation for Go library consumers.
+- Enables IDE extensions (LSP servers, editor plugins) to embed addlicense natively.
+
+**Cons:**
+- Maintaining two `Options` structs until v2.0.0.
+- Risk of API decisions we'll regret at v1.0.0 — must design carefully.
 
 ---
 

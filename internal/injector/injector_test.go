@@ -6,6 +6,7 @@ package injector_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -429,6 +430,49 @@ func TestExtractYear_BeyondScanWindow(t *testing.T) {
 	path := writeTemp(t, b.String())
 	if got := injector.ExtractYear(path); got != 0 {
 		t.Errorf("expected 0 (year past scan window), got %d", got)
+	}
+}
+
+// ── Permission preservation ───────────────────────────────────────────────────
+
+func TestInject_PreservesPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix permission bits not supported on Windows")
+	}
+	path := filepath.Join(t.TempDir(), "script.sh")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\necho hello\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := injector.Inject(path, "# SPDX-License-Identifier: MIT\n# Copyright 2026 Test"); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Errorf("expected permissions 0755, got %04o", info.Mode().Perm())
+	}
+}
+
+func TestRemove_PreservesPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix permission bits not supported on Windows")
+	}
+	path := filepath.Join(t.TempDir(), "script.sh")
+	content := "#!/bin/sh\n# SPDX-License-Identifier: MIT\n# Copyright 2026 Test\n\necho hello\n"
+	if err := os.WriteFile(path, []byte(content), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := injector.Remove(path, "#", "", ""); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Errorf("expected permissions 0755, got %04o", info.Mode().Perm())
 	}
 }
 

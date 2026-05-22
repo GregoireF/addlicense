@@ -1446,3 +1446,98 @@ func TestRun_Diff_CheckConflict(t *testing.T) {
 		t.Error("--diff --check should return an error")
 	}
 }
+
+func TestRun_Diff_Remove_WithHeader(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testLicensedBody})
+	opts := config.Options{
+		Ignore: config.DefaultIgnore,
+		Paths:  []string{root},
+		Diff:   true,
+		Remove: true,
+	}
+	out := captureStdout(t, func() {
+		if err := runner.Run(opts); err == nil {
+			t.Error("expected non-nil error (file would be modified)")
+		}
+	})
+	if !strings.Contains(out, "diff-remove") {
+		t.Errorf("expected diff-remove in JSON output:\n%s", out)
+	}
+	// File must be unchanged.
+	if content := readFile(t, filepath.Join(root, testMainGo)); content != testLicensedBody {
+		t.Errorf("--diff --remove must not modify file:\n%s", content)
+	}
+}
+
+func TestRun_Diff_Remove_WithoutHeader_Skipped(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	opts := config.Options{
+		Ignore: config.DefaultIgnore,
+		Paths:  []string{root},
+		Diff:   true,
+		Remove: true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Errorf("no-header file in diff-remove should be skipped (exit 0), got: %v", err)
+	}
+}
+
+func TestRun_Diff_Update_NoHeader_EmitsDiffAdd(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	opts := config.Options{
+		License: testLicense,
+		Author:  testAuthor,
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Diff:    true,
+		Update:  true,
+	}
+	out := captureStdout(t, func() {
+		runner.Run(opts) //nolint:errcheck
+	})
+	if !strings.Contains(out, "diff-add") {
+		t.Errorf("expected diff-add for unlicensed file in --diff --update:\n%s", out)
+	}
+}
+
+func TestRun_Diff_BadTemplate_Error(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	tmplPath := filepath.Join(t.TempDir(), "bad.txt")
+	if err := os.WriteFile(tmplPath, []byte("{{."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	opts := config.Options{
+		License:  testLicense,
+		Author:   testAuthor,
+		Year:     2026,
+		Template: tmplPath,
+		Ignore:   config.DefaultIgnore,
+		Paths:    []string{root},
+		Diff:     true,
+	}
+	if err := runner.Run(opts); err == nil {
+		t.Error("expected error for malformed template in --diff mode")
+	}
+}
+
+func TestRun_Diff_BadTemplate_Update_Error(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testLicensedBody})
+	tmplPath := filepath.Join(t.TempDir(), "bad.txt")
+	if err := os.WriteFile(tmplPath, []byte("{{."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	opts := config.Options{
+		License:  testLicense,
+		Author:   testAuthor,
+		Year:     2026,
+		Template: tmplPath,
+		Ignore:   config.DefaultIgnore,
+		Paths:    []string{root},
+		Diff:     true,
+		Update:   true,
+	}
+	if err := runner.Run(opts); err == nil {
+		t.Error("expected error for malformed template in --diff --update mode")
+	}
+}

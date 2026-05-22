@@ -358,10 +358,6 @@ func emit(r fileResult, useJSON bool, enc *json.Encoder, verbose, quiet bool) {
 		if !quiet {
 			fmt.Printf("[dry-run] %s: %s\n", r.Action, r.Path)
 		}
-	case actionDiffAdd, actionDiffUpdate, actionDiffRemove:
-		if !quiet {
-			fmt.Printf("[diff] %s: %s\n", r.Action, r.Path)
-		}
 	case actionMissing:
 		if !quiet {
 			fmt.Fprintf(os.Stderr, "missing header: %s\n", r.Path)

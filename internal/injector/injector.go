@@ -61,7 +61,12 @@ func HasHeader(path string) (bool, error) {
 
 // Inject prepends header to the file, respecting shebangs and file encoding.
 // If the file already has a header (idempotent check), it returns without modifying.
+// Original file permissions are preserved.
 func Inject(path, header string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
 	existing, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -92,7 +97,7 @@ func Inject(path, header string) error {
 	out.WriteString("\n")
 	out.WriteString(rest)
 
-	return os.WriteFile(path, []byte(out.String()), 0o644)
+	return os.WriteFile(path, []byte(out.String()), info.Mode().Perm())
 }
 
 // Remove strips the license header from path using the provided comment style.
@@ -100,8 +105,13 @@ func Inject(path, header string) error {
 // blockOpen/blockClose delimit block comments (e.g. "<!--", "-->").
 // The header is only removed when at least one of its comment lines contains
 // "spdx-license-identifier" or "copyright" (case-insensitive).
+// Original file permissions are preserved.
 // Returns true if the file was modified.
 func Remove(path, lineComment, blockOpen, blockClose string) (bool, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false, err
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return false, err
@@ -110,7 +120,7 @@ func Remove(path, lineComment, blockOpen, blockClose string) (bool, error) {
 	if !changed {
 		return false, nil
 	}
-	return true, os.WriteFile(path, []byte(result), 0o644)
+	return true, os.WriteFile(path, []byte(result), info.Mode().Perm())
 }
 
 // stripHeader returns content with the leading license header removed, and

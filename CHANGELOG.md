@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.0] — 2026-05-22
+
+### Fixed
+
+- **File permission preservation** — `injector.Inject` and `injector.Remove` now preserve the original file's permission bits (`info.Mode().Perm()`) instead of always writing `0o644`. Previously, executable scripts (`chmod +x deploy.sh`) would silently lose their execute bit after an `addlicense` run. The fix is a no-op on Windows where the OS does not enforce Unix permission bits.
+
+### Improved
+
+- **Coverage: 89.1% → 90.4%** — 10 new integration tests covering `diffFile` error paths, remove-with-header, remove-without-header, update-no-header, and malformed-template error propagation. Dead code removed from `emit` (text-mode diff branch was unreachable since `handleResults` forces JSON when `--diff` is set). `emit` function is now 100% covered.
+- **Documentation** — `--ignore` matching rules documented (glob + substring semantics). Multi-author + `--update` replace semantics documented in README.
+
+### Added
+
+- `TestInject_PreservesPermissions` and `TestRemove_PreservesPermissions` (skipped on Windows).
+
+---
+
 ## [0.6.0] — 2026-05-22
 
 ### Added

@@ -99,8 +99,9 @@ Examples:
 // parseAuthorFile reads copyright holders from file content, one per line.
 // Lines starting with '#' and blank lines are ignored.
 func parseAuthorFile(content string) []string {
-	var authors []string
-	for _, line := range strings.Split(content, "\n") {
+	lines := strings.Split(content, "\n")
+	authors := make([]string, 0, len(lines))
+	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue

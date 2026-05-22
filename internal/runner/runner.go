@@ -6,16 +6,19 @@ package runner
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/GregoireF/addlicense/internal/config"
 	"github.com/GregoireF/addlicense/internal/dep5"
 	"github.com/GregoireF/addlicense/internal/header"
 	"github.com/GregoireF/addlicense/internal/injector"
+	"github.com/GregoireF/addlicense/internal/sbom"
 	"github.com/GregoireF/addlicense/internal/scanner"
 )
 
@@ -62,6 +65,10 @@ func Run(opts config.Options) error {
 	}
 	opts.Normalize()
 
+	if opts.Sbom != "" {
+		return sbomRun(opts)
+	}
+
 	tmplText := header.BuiltinTemplate(opts.License)
 	if opts.Template != "" {
 		data, err := os.ReadFile(opts.Template)
@@ -100,20 +107,36 @@ func Run(opts config.Options) error {
 }
 
 func validateOpts(opts *config.Options) error {
+	if err := validateOutputOpts(opts); err != nil {
+		return err
+	}
+	return validateModeMutualExclusion(opts)
+}
+
+// validateOutputOpts checks output-related flag combinations.
+func validateOutputOpts(opts *config.Options) error {
 	if opts.Verbose && opts.Quiet {
 		return fmt.Errorf("--verbose and --quiet are mutually exclusive")
 	}
+	if opts.Format != "" && opts.Format != "text" && opts.Format != "json" {
+		return fmt.Errorf("--format must be \"text\" or \"json\", got %q", opts.Format)
+	}
+	return nil
+}
+
+// validateModeMutualExclusion checks that mutually exclusive mode flags are not combined.
+func validateModeMutualExclusion(opts *config.Options) error {
 	if opts.CheckOnly && (opts.Remove || opts.Update) {
 		return fmt.Errorf("--check cannot be combined with --remove or --update")
 	}
 	if opts.Remove && opts.Update {
 		return fmt.Errorf("--remove and --update are mutually exclusive; --update implies removal")
 	}
-	if opts.Format != "" && opts.Format != "text" && opts.Format != "json" {
-		return fmt.Errorf("--format must be \"text\" or \"json\", got %q", opts.Format)
-	}
 	if opts.Diff && opts.CheckOnly {
 		return fmt.Errorf("--diff and --check are mutually exclusive")
+	}
+	if opts.Sbom != "" && (opts.CheckOnly || opts.Remove || opts.Update || opts.Diff || opts.Dep5 || opts.DryRun) {
+		return fmt.Errorf("--sbom cannot be combined with --check, --remove, --update, --diff, --dep5, or --dry-run")
 	}
 	return nil
 }
@@ -405,6 +428,67 @@ func writeDep5(files []scanner.File, opts config.Options, cwd string) error {
 		return fmt.Errorf("creating .reuse directory: %w", err)
 	}
 	return os.WriteFile(filepath.Join(dir, "dep5"), []byte(content), 0o644)
+}
+
+// sbomRun scans files, reads existing license headers, and writes a SPDX 2.3
+// tag-value document to opts.Sbom ("-" = stdout).
+// Each file's LicenseInfoInFile comes from the SPDX-License-Identifier header
+// actually present in the file. LicenseConcluded falls back to opts.License
+// when no header is found, so running addlicense then --sbom gives a complete document.
+func sbomRun(opts config.Options) error {
+	files, err := scanner.Walk(opts.Paths, opts.Ignore)
+	if err != nil {
+		return err
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		cwd = "."
+	}
+
+	// Determine document name from the first path argument (basename).
+	docName := "project"
+	if len(opts.Paths) > 0 {
+		docName = filepath.Base(opts.Paths[0])
+		if docName == "." || docName == "/" {
+			docName = "project"
+		}
+	}
+
+	entries := make([]sbom.FileEntry, 0, len(files))
+	for _, f := range files {
+		if header.LangFor(f.Ext) == nil {
+			continue // unsupported type: skip (would land in dep5, not inline headers)
+		}
+		rel, err := filepath.Rel(cwd, f.Path)
+		if err != nil {
+			rel = f.Path
+		}
+		spdxID, copyright, err := injector.ExtractLicenseInfo(f.Path)
+		if err != nil {
+			return fmt.Errorf("reading %s: %w", rel, err)
+		}
+		entries = append(entries, sbom.FileEntry{
+			Path:            rel,
+			LicenseID:       spdxID,
+			CopyrightText:   copyright,
+			FallbackLicense: opts.License,
+		})
+	}
+
+	doc := sbom.Document{
+		Name:    docName,
+		Tool:    "addlicense-1.0.0",
+		Created: time.Now().UTC(),
+		Entries: entries,
+	}
+	content := sbom.Build(doc)
+
+	if opts.Sbom == "-" {
+		_, err = io.WriteString(os.Stdout, content)
+		return err
+	}
+	return os.WriteFile(opts.Sbom, []byte(content), 0o644)
 }
 
 func buildCopyrightLine(fromYear, year int, author string, reuse bool) string {

@@ -329,6 +329,54 @@ func TestCLI_Diff_CheckConflict(t *testing.T) {
 	}
 }
 
+// v1.0.0: --sbom
+
+func TestCLI_Sbom_WritesFile(t *testing.T) {
+	dir := t.TempDir()
+	writeMainGo(t, dir, "// SPDX-License-Identifier: MIT\n// Copyright 2026 Test\n\npackage main\n")
+	out := filepath.Join(t.TempDir(), "sbom.spdx")
+
+	_, _, code := run(t, "--sbom", out, dir)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d", code)
+	}
+
+	content, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("reading sbom output: %v", err)
+	}
+	if !strings.Contains(string(content), "SPDXVersion: SPDX-2.3") {
+		t.Errorf("expected SPDX 2.3 output:\n%s", string(content))
+	}
+	if !strings.Contains(string(content), "LicenseConcluded: MIT") {
+		t.Errorf("expected MIT in output:\n%s", string(content))
+	}
+}
+
+func TestCLI_Sbom_Stdout(t *testing.T) {
+	dir := t.TempDir()
+	writeMainGo(t, dir, "// SPDX-License-Identifier: MIT\n// Copyright 2026 Test\n\npackage main\n")
+
+	stdout, _, code := run(t, "--sbom", "-", dir)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d", code)
+	}
+	if !strings.Contains(stdout, "SPDXVersion: SPDX-2.3") {
+		t.Errorf("expected SPDX output on stdout:\n%s", stdout)
+	}
+}
+
+func TestCLI_Sbom_MutualExclusion_Check(t *testing.T) {
+	dir := t.TempDir()
+	writeMainGo(t, dir, "package main\n")
+	out := filepath.Join(t.TempDir(), "sbom.spdx")
+
+	_, _, code := run(t, "--sbom", out, "--check", dir)
+	if code == 0 {
+		t.Error("expected non-zero exit for --sbom --check")
+	}
+}
+
 // v0.9.0: --author-file
 
 func TestCLI_AuthorFile_InjectsAllAuthors(t *testing.T) {

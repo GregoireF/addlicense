@@ -34,11 +34,17 @@ const (
 	FormatJSON = "json" // JSON Lines: {"file":"…","status":"…","header":"…","error":"…"}
 )
 
+// defaultIgnoreSrc is the canonical default ignore list, held separately so
+// that the exported DefaultIgnore slice can be a safe independent copy.
+var defaultIgnoreSrc = config.DefaultIgnore
+
 // DefaultIgnore is the default set of path patterns excluded when Options.Ignore is nil.
-// Callers may extend it without modifying the original slice:
+//
+// It is a copy of the internal default list. Appending to it is safe and does
+// not affect other callers or the internal default:
 //
 //	opts.Ignore = append(append([]string{}, addlicense.DefaultIgnore...), "testdata")
-var DefaultIgnore = config.DefaultIgnore
+var DefaultIgnore = append([]string{}, defaultIgnoreSrc...)
 
 // Options configures a single addlicense run.
 // All fields have sensible zero values — Run applies the same defaults as the CLI
@@ -116,6 +122,14 @@ type Options struct {
 	// Workers sets the number of parallel goroutines for file processing.
 	// Zero (default) uses runtime.NumCPU().
 	Workers int
+
+	// Sbom is the output path for a SPDX 2.3 tag-value document.
+	// Set to "-" to write to stdout.
+	// When non-empty this activates SBOM mode: files are scanned for existing
+	// SPDX-License-Identifier headers and the results are aggregated into the
+	// document. No files are modified. Mutually exclusive with CheckOnly,
+	// Remove, Update, Diff, Dep5, and DryRun.
+	Sbom string
 }
 
 // Run executes the license header operation described by opts.
@@ -153,5 +167,6 @@ func toInternal(o Options) config.Options {
 		Quiet:     o.Quiet,
 		Format:    o.Format,
 		Workers:   o.Workers,
+		Sbom:      o.Sbom,
 	}
 }

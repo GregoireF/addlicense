@@ -37,6 +37,7 @@ type Options struct {
 	YearRange bool   // emit "YYYY-YYYY" copyright range when updating files with an existing year
 	Dep5      bool   // generate .reuse/dep5 for files without inline header support
 	Diff      bool   // emit JSON Lines with the rendered header for each file that would change (no writes)
+	Sbom      string // output path for SPDX 2.3 document ("-" = stdout); empty = disabled
 }
 
 // fileConfig is the shape of .addlicenserc.yaml / .addlicenserc.json.

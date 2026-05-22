@@ -1613,3 +1613,78 @@ func TestRun_NewLang_Markdown(t *testing.T) {
 		t.Errorf("expected HTML comment in Markdown, got:\n%s", got)
 	}
 }
+
+// v1.0.0: --sbom mode
+
+func TestRun_Sbom_WritesFile(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testLicensedBody})
+	out := filepath.Join(t.TempDir(), "sbom.spdx")
+	if err := runner.Run(config.Options{
+		License: testLicense,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Sbom:    out,
+	}); err != nil {
+		t.Fatalf("Run --sbom: %v", err)
+	}
+	content := readFile(t, out)
+	if !strings.Contains(content, "SPDXVersion: SPDX-2.3") {
+		t.Errorf("expected SPDX header:\n%s", content)
+	}
+	if !strings.Contains(content, "LicenseConcluded: MIT") {
+		t.Errorf("expected LicenseConcluded MIT from file header:\n%s", content)
+	}
+}
+
+func TestRun_Sbom_UnlicensedFile_FallbackLicense(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	out := filepath.Join(t.TempDir(), "sbom.spdx")
+	if err := runner.Run(config.Options{
+		License: testLicense,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Sbom:    out,
+	}); err != nil {
+		t.Fatalf("Run --sbom: %v", err)
+	}
+	content := readFile(t, out)
+	// No SPDX-License-Identifier in file → fallback to opts.License.
+	if !strings.Contains(content, "LicenseConcluded: MIT") {
+		t.Errorf("expected fallback MIT in LicenseConcluded:\n%s", content)
+	}
+	// LicenseInfoInFile must be NOASSERTION (nothing in the file itself).
+	if !strings.Contains(content, "LicenseInfoInFile: NOASSERTION") {
+		t.Errorf("expected LicenseInfoInFile NOASSERTION:\n%s", content)
+	}
+}
+
+func TestRun_Sbom_MutualExclusion_Check(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testLicensedBody})
+	out := filepath.Join(t.TempDir(), "sbom.spdx")
+	err := runner.Run(config.Options{
+		Ignore:    config.DefaultIgnore,
+		Paths:     []string{root},
+		Sbom:      out,
+		CheckOnly: true,
+	})
+	if err == nil {
+		t.Error("expected error for --sbom --check, got nil")
+	}
+}
+
+func TestRun_Sbom_Stdout(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testLicensedBody})
+	out := captureStdout(t, func() {
+		if err := runner.Run(config.Options{
+			License: testLicense,
+			Ignore:  config.DefaultIgnore,
+			Paths:   []string{root},
+			Sbom:    "-",
+		}); err != nil {
+			t.Errorf("Run --sbom -: %v", err)
+		}
+	})
+	if !strings.Contains(out, "SPDXVersion: SPDX-2.3") {
+		t.Errorf("expected SPDX output on stdout:\n%s", out)
+	}
+}

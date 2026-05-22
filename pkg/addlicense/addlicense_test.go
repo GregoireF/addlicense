@@ -247,6 +247,29 @@ func TestRun_Reuse_EmitsSPDXFileCopyrightText(t *testing.T) {
 	}
 }
 
+func TestRun_Sbom_WritesDocument(t *testing.T) {
+	dir := t.TempDir()
+	p := writeGoFile(t, dir, "// SPDX-License-Identifier: MIT\n// Copyright 2026 Test\n\npackage main\n")
+	_ = p
+	out := dir + "/sbom.spdx"
+
+	err := addlicense.Run(addlicense.Options{
+		Sbom:  out,
+		Paths: []string{dir},
+	})
+	if err != nil {
+		t.Fatalf("Run --sbom: %v", err)
+	}
+
+	content, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("reading sbom: %v", err)
+	}
+	if !strings.Contains(string(content), "SPDXVersion: SPDX-2.3") {
+		t.Errorf("expected SPDX 2.3 output:\n%s", string(content))
+	}
+}
+
 func TestRun_InvalidMutualExclusion_CheckAndDiff(t *testing.T) {
 	dir := t.TempDir()
 	writeGoFile(t, dir, "package main\n")

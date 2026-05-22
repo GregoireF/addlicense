@@ -72,36 +72,16 @@ Public Go API. `github.com/GregoireF/addlicense/pkg/addlicense` exposes `Options
 ### v0.9.0 — 2026-05-22
 Language expansion and `--author-file`. Added Lua, Nix, Zig, `.dockerfile`, `.mk`, Markdown (`.md`/`.mdx`) — 8 new file types, zero new dependencies, fully backward-compatible. `--author-file` reads copyright holders from a text file (one per line, `#` comments ignored), composable with `--update` and `--reuse`. 9 new tests added across header, integration, and CLI packages.
 
+### v1.0.0 — 2026-05-22
+Stable API and SBOM. `--sbom <file>` generates a minimal [SPDX 2.3](https://spdx.github.io/spdx-spec/v2.3/) tag-value document from existing licence headers — no files modified, no external dependency (implemented in-house in `internal/sbom`). `LicenseInfoInFile` reflects the actual file header; `LicenseConcluded` falls back to `--license` for unlicensed files; `NOASSERTION` when neither is available. Public API frozen: `pkg/addlicense` is now under semantic versioning — any rename, signature change, or removal is a breaking change requiring v2.0.0. `DefaultIgnore` fixed to return an independent copy (not a shared reference). `AuthorFile` deliberately kept CLI-only — library callers own their I/O. Windows binary tested and validated (`C:\tmp\addlicense-local.exe`). Coverage ≥ 90.4%. 15 new tests across sbom, injector, integration, CLI, and pkg packages.
+
 ---
 
 ## Planned versions
 
 ---
 
-### v1.0.0 — Stable API and SBOM
-
-**Target:** after v0.9.x stabilisation, API freeze, and community validation of the `pkg/` surface.
-
-#### API stability guarantee
-
-With `pkg/addlicense` shipped in v0.8.0, v1.0.0 freezes the public API under semantic versioning: any rename, signature change, or removal of an exported symbol is a breaking change requiring v2.0.0. The internal packages remain free to evolve.
-
-**Pre-1.0.0 checklist:**
-- Survey `pkg/addlicense` API for any fields or names likely to be regretted at v2.0.0.
-- Decide whether `AuthorFile string` should be added to `pkg.Options` (currently CLI-only — library callers read files themselves).
-- Confirm `DefaultIgnore` slice behaviour (currently a shared reference — should it return a copy?).
-
-#### SBOM generation (`--sbom`)
-
-**What:** Aggregate scanned SPDX headers into an [SPDX 2.3](https://spdx.github.io/spdx-spec/v2.3/) document (JSON or tag-value format).
-
-**Justification:** The EU Cyber Resilience Act (enforcement 2027) mandates an SBOM for CE-marked software. SPDX identifiers — already emitted by addlicense — are the standard format for SBOM licence data at the file level.
-
-**Decision:** Use [`spdx/tools-golang`](https://github.com/spdx/tools-golang) for serialisation. Scope to file-level SPDX documents only. Document clearly that this satisfies CRA file-level requirements but does not replace a full dependency SBOM tool (syft, cdxgen).
-
-**Pros:** Direct CRA readiness for existing users — one additional flag. Differentiator vs. competitors (none produce SPDX output).
-
-**Cons:** SPDX 2.3 document structure is complex; adds a dependency; minimal `--sbom` omits package-level metadata auditors may still require separately.
+### v1.0.0 content (now released — see Released section above)
 
 ---
 

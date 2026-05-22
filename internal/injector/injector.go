@@ -11,6 +11,8 @@ import (
 )
 
 var yearRe = regexp.MustCompile(`(?i)(?:copyright|spdx-filecopyrighttext:)\s+(\d{4})`)
+var spdxIDRe = regexp.MustCompile(`(?i)SPDX-License-Identifier:\s*(\S+)`)
+var copyrightLineRe = regexp.MustCompile(`(?i)(?:Copyright|SPDX-FileCopyrightText:)\s+(.+)`)
 
 const (
 	scanLines    = 20
@@ -37,6 +39,36 @@ func ExtractYear(path string) int {
 		}
 	}
 	return 0
+}
+
+// ExtractLicenseInfo reads the first scanLines lines of path and returns the
+// SPDX-License-Identifier value and the first copyright line found.
+// Returns empty strings (not errors) when a marker is absent.
+func ExtractLicenseInfo(path string) (spdxID, copyright string, err error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", "", err
+	}
+	lines := strings.SplitN(string(data), "\n", scanLines+1)
+	if len(lines) > scanLines {
+		lines = lines[:scanLines]
+	}
+	for _, line := range lines {
+		if spdxID == "" {
+			if m := spdxIDRe.FindStringSubmatch(line); m != nil {
+				spdxID = strings.TrimSpace(m[1])
+			}
+		}
+		if copyright == "" {
+			if m := copyrightLineRe.FindStringSubmatch(line); m != nil {
+				copyright = strings.TrimSpace(m[1])
+			}
+		}
+		if spdxID != "" && copyright != "" {
+			break
+		}
+	}
+	return spdxID, copyright, nil
 }
 
 // HasHeader reports whether the file already contains a license header.

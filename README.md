@@ -43,6 +43,8 @@ docker run --rm -v "$PWD:/src" -w /src ghcr.io/gregoiref/addlicense --license MI
 go install github.com/GregoireF/addlicense/cmd/addlicense@latest
 ```
 
+> **Note:** if you have [google/addlicense](https://github.com/google/addlicense) installed via `go install`, the binaries share the same name and the last `go install` wins. The two tools have incompatible CLIs (different flags and defaults). Install one or the other, or use the binary download / Docker approach to avoid the collision.
+
 ---
 
 ## Quick start
@@ -75,6 +77,10 @@ addlicense --license MIT --author-file AUTHORS .
 # Show what would change without writing (JSON Lines output, exit 1 if changes needed)
 addlicense --diff .
 
+# Generate SPDX 2.3 SBOM (EU Cyber Resilience Act compliance)
+addlicense --sbom sbom.spdx .
+addlicense --sbom - . | head   # stdout
+
 # Custom template
 addlicense --template ./header.txt .
 
@@ -106,9 +112,10 @@ addlicense --ignore "dist,vendor,*.gen.go" .
 | `--year-range` | | `false` | Preserve original copyright year on `--update` — emits `YYYY-YYYY` range |
 | `--dep5` | | `false` | Generate `.reuse/dep5` for files that cannot carry inline headers (images, binaries…) |
 | `--author-file` | | — | Path to a file listing copyright holders, one per line (mutually exclusive with `--author`) |
+| `--sbom` | | — | Write a [SPDX 2.3](https://spdx.github.io/spdx-spec/v2.3/) tag-value document to this path (`-` for stdout). Reads existing headers; no files modified. Mutually exclusive with `--check`/`--remove`/`--update`/`--diff`/`--dep5`/`--dry-run` |
 | `--version` | | | Print version and build info |
 
-**Mutually exclusive:** `--verbose`/`--quiet` · `--check`/`--remove` · `--check`/`--update` · `--remove`/`--update` · `--diff`/`--check` · `--author`/`--author-file`
+**Mutually exclusive:** `--verbose`/`--quiet` · `--check`/`--remove` · `--check`/`--update` · `--remove`/`--update` · `--diff`/`--check` · `--author`/`--author-file` · `--sbom`/(most other modes)
 
 **Default ignore list:** `vendor`, `node_modules`, `.git`, `dist`, `build`, `*.pb.go`, `*.gen.go`
 
@@ -216,6 +223,30 @@ Run the benchmarks yourself:
 go test -bench=. -benchtime=3s ./tests/bench/       # end-to-end pipeline
 go test -bench=. -benchtime=3s ./internal/injector/ # injector micro-benchmarks
 ```
+
+---
+
+## SBOM / EU Cyber Resilience Act (since v1.0.0)
+
+`--sbom <file>` generates a minimal [SPDX 2.3](https://spdx.github.io/spdx-spec/v2.3/) tag-value document from the existing licence headers in your codebase. No files are modified.
+
+```bash
+# Generate sbom.spdx from current header state
+addlicense --sbom sbom.spdx .
+
+# Stream to stdout
+addlicense --sbom - .
+
+# Combine with --license to fill in a fallback for unlicensed files
+addlicense --license MIT --sbom sbom.spdx .
+```
+
+For each file the tool scans:
+- `LicenseInfoInFile` — the `SPDX-License-Identifier:` value found in the file header, or `NOASSERTION` if none.
+- `LicenseConcluded` — same as above; falls back to `--license` when the file has no header.
+- `FileCopyrightText` — the copyright line extracted from the header, or `NOASSERTION`.
+
+The document satisfies the EU CRA requirement for file-level SPDX identification ([ENISA CRA guidance, SPDX 2.3 file-element section](https://www.enisa.europa.eu/publications/cyber-resilience-act-requirements-standards-mapping)). For a full dependency-graph SBOM (packages, purls, CVEs) use a dedicated tool such as [syft](https://github.com/anchore/syft) or [cdxgen](https://github.com/CycloneDX/cdxgen) alongside addlicense.
 
 ---
 

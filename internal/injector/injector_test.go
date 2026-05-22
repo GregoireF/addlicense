@@ -476,6 +476,76 @@ func TestRemove_PreservesPermissions(t *testing.T) {
 	}
 }
 
+// ── ExtractLicenseInfo ────────────────────────────────────────────────────────
+
+func TestExtractLicenseInfo_BothPresent(t *testing.T) {
+	content := "// SPDX-License-Identifier: MIT\n// Copyright 2026 Acme Corp\n\npackage main\n"
+	path := writeTemp(t, content)
+	spdxID, copyright, err := injector.ExtractLicenseInfo(path)
+	if err != nil {
+		t.Fatalf("ExtractLicenseInfo: %v", err)
+	}
+	if spdxID != "MIT" {
+		t.Errorf("spdxID = %q, want %q", spdxID, "MIT")
+	}
+	if !strings.Contains(copyright, "Acme Corp") {
+		t.Errorf("copyright = %q, want Acme Corp", copyright)
+	}
+}
+
+func TestExtractLicenseInfo_ReuseStyle(t *testing.T) {
+	content := "# SPDX-License-Identifier: Apache-2.0\n# SPDX-FileCopyrightText: 2026 Bob\n"
+	path := writeTemp(t, content)
+	spdxID, copyright, err := injector.ExtractLicenseInfo(path)
+	if err != nil {
+		t.Fatalf("ExtractLicenseInfo: %v", err)
+	}
+	if spdxID != "Apache-2.0" {
+		t.Errorf("spdxID = %q, want Apache-2.0", spdxID)
+	}
+	if !strings.Contains(copyright, "Bob") {
+		t.Errorf("copyright = %q, want Bob", copyright)
+	}
+}
+
+func TestExtractLicenseInfo_NoHeader(t *testing.T) {
+	path := writeTemp(t, "package main\n")
+	spdxID, copyright, err := injector.ExtractLicenseInfo(path)
+	if err != nil {
+		t.Fatalf("ExtractLicenseInfo: %v", err)
+	}
+	if spdxID != "" {
+		t.Errorf("expected empty spdxID, got %q", spdxID)
+	}
+	if copyright != "" {
+		t.Errorf("expected empty copyright, got %q", copyright)
+	}
+}
+
+func TestExtractLicenseInfo_FileNotFound(t *testing.T) {
+	_, _, err := injector.ExtractLicenseInfo(nonexistentPath(t))
+	if err == nil {
+		t.Error("expected error for non-existent file, got nil")
+	}
+}
+
+func TestExtractLicenseInfo_BeyondScanWindow(t *testing.T) {
+	// SPDX marker placed beyond the first 20 lines — must not be found.
+	var b strings.Builder
+	for i := 0; i < 21; i++ {
+		b.WriteString("// filler line\n")
+	}
+	b.WriteString("// SPDX-License-Identifier: MIT\n")
+	path := writeTemp(t, b.String())
+	spdxID, _, err := injector.ExtractLicenseInfo(path)
+	if err != nil {
+		t.Fatalf("ExtractLicenseInfo: %v", err)
+	}
+	if spdxID != "" {
+		t.Errorf("expected empty spdxID (past scan window), got %q", spdxID)
+	}
+}
+
 // nonexistentPath returns a path guaranteed not to exist.
 func nonexistentPath(t *testing.T) string {
 	t.Helper()

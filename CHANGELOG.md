@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.0] — 2026-05-22
+
+### Added
+
+- **`--sbom <file>` flag** — generates a minimal [SPDX 2.3](https://spdx.github.io/spdx-spec/v2.3/) tag-value document from the existing licence headers in the scanned files. No files are modified. Output path accepts `-` for stdout. For each file: `LicenseInfoInFile` comes from the `SPDX-License-Identifier:` header in the file; `LicenseConcluded` falls back to `--license` when the file has no header; `FileCopyrightText` comes from the copyright line. Designed for EU Cyber Resilience Act compliance (ENISA CRA guidance, SPDX 2.3 file-element section).
+- **`internal/sbom` package** — pure-Go SPDX 2.3 tag-value document builder. No external SPDX library dependency — keeps the binary lean and the build reproducible. `Build(Document) string` generates valid SPDX 2.3 with document header, package section, file elements, and `CONTAINS` relationships. Deterministic output (walk order from `filepath.WalkDir`).
+- **`injector.ExtractLicenseInfo(path)`** — reads the first 20 lines and returns the `SPDX-License-Identifier` value and the first copyright line. Used by the SBOM mode to audit existing file state without modifying files.
+- **`Sbom string` in `pkg/addlicense.Options`** — SBOM mode available from the public Go library API.
+
+### Changed
+
+- **`validateOpts` refactored** into `validateOutputOpts` + `validateModeMutualExclusion` to keep cyclomatic complexity under the gocyclo-15 lint threshold after adding the new `--sbom` exclusions.
+- **`pkg/addlicense.DefaultIgnore`** is now an independent copy of the internal default list (not an alias). Appending to it is safe across callers without risk of mutating the shared source.
+
+### Fixed
+
+- **PATH conflict documented** — `go install` overwrites google/addlicense when both are installed. README now warns and recommends binary download or Docker to avoid the collision.
+
+### Stable API (v1.0.0 guarantee)
+
+The `pkg/addlicense` package is now under semantic versioning freeze. Any rename, removal, or signature change to an exported symbol requires a v2.0.0 major version bump. `internal/` packages remain free to evolve.
+
+**Extended test suite:**
+- `internal/sbom/sbom_test.go`: 8 tests — header section, file with/without header, fallback licence, multiple files, namespace, defaults, path normalisation.
+- `internal/injector`: 5 new `TestExtractLicenseInfo` tests — both fields present, REUSE style, no header, file not found, beyond scan window.
+- `tests/integration`: 4 new SBOM tests — writes file, unlicensed fallback, mutual exclusion, stdout.
+- `tests/cli`: 3 new SBOM tests — writes file, stdout, mutual exclusion.
+- `pkg/addlicense`: 1 new SBOM test.
+
+---
+
 ## [0.9.0] — 2026-05-22
 
 ### Added

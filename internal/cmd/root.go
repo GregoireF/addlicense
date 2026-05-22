@@ -36,7 +36,9 @@ Examples:
   addlicense --dep5 --license MIT --author "Acme" .
   addlicense --check --format json .
   addlicense --template ./header.txt .
-  addlicense --ignore dist,vendor .`,
+  addlicense --ignore dist,vendor .
+  addlicense --sbom sbom.spdx .
+  addlicense --sbom - . | head`,
 		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -90,6 +92,9 @@ Examples:
 	// Header management
 	root.Flags().BoolVar(&opts.YearRange, "year-range", false, "Preserve original copyright year when updating (emits \"YYYY-YYYY\" range)")
 	root.Flags().BoolVar(&opts.Dep5, "dep5", false, "Generate .reuse/dep5 for files that cannot carry inline headers (REUSE compliance)")
+
+	// SBOM / compliance
+	root.Flags().StringVar(&opts.Sbom, "sbom", "", "Generate a SPDX 2.3 tag-value document at this path (\"-\" for stdout). Mutually exclusive with --check/--remove/--update/--diff/--dep5/--dry-run")
 
 	root.SetVersionTemplate(fmt.Sprintf("addlicense %s\nbuild: %s @ %s\n", version, commit, date))
 

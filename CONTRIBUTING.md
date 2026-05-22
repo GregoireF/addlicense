@@ -135,13 +135,31 @@ To add a template:
 
 ---
 
+## Internal package guide
+
+| Package | Responsibility |
+| :-- | :-- |
+| `internal/config` | `Options` struct, config-file loading, defaults/normalisation |
+| `internal/header` | Language map, comment-style wrapping, built-in SPDX templates |
+| `internal/injector` | File-level read/write: `Inject`, `Remove`, `HasHeader`, `ExtractYear`, `ExtractLicenseInfo` |
+| `internal/scanner` | Recursive file walk with ignore patterns |
+| `internal/runner` | Orchestrates scanner → injector pipeline; validates flags; all modes (add/check/remove/update/diff/sbom/dep5) |
+| `internal/dep5` | Generates `.reuse/dep5` bulk-licence declarations |
+| `internal/sbom` | Generates SPDX 2.3 tag-value documents (v1.0.0+) |
+| `internal/cmd` | Cobra root command wiring all flags to `config.Options` |
+| `pkg/addlicense` | Public stable Go API (v0.8.0+); thin wrapper over `internal/runner` |
+
+**Adding a package:** place it under `internal/` if it is an implementation detail that callers should not import directly. Place it under `pkg/` only if it is part of the stable public API. The `internal/` boundary is enforced by the Go toolchain.
+
+---
+
 ## Release process
 
 Releases are fully automated via GoReleaser triggered by a `v*` tag.
 
 ```bash
-git tag v0.3.0
-git push origin v0.3.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 This builds multi-platform binaries, publishes a GitHub Release, pushes a Docker image to GHCR, and updates the Homebrew tap. No manual steps.
@@ -152,10 +170,12 @@ This builds multi-platform binaries, publishes a GitHub Release, pushes a Docker
 
 ## Design principles
 
-**Minimal and composable.** addlicense does one thing: manage licence headers. It does not lint, generate SBOMs, or validate dependency licences. Those concerns belong to other tools.
+**Minimal and composable.** addlicense manages licence headers and produces file-level SPDX data. It does not lint, validate dependency licences, or build a full dependency-graph SBOM. Those concerns belong to dedicated tools (syft, cdxgen, REUSE lint).
 
 **Zero-config for the common case.** `addlicense --license MIT .` should work with no config file, no environment variables, no setup. The config file is opt-in for teams that want shared defaults.
 
 **Idempotence is non-negotiable.** Running addlicense twice must produce the same result as running it once. The detection window (top 20 lines, `SPDX-License-Identifier:` or `copyright`) is intentionally broad to handle manually-edited headers.
 
-**No parallel processing (yet).** The scanner + injector pipeline is I/O-bound, not CPU-bound. For typical repos (< 10 000 files), sequential processing completes in under a second. Goroutine overhead (mutex on stdout, error channels, race testing complexity) is not worth it until benchmarks justify it. Deferred to v0.4.0.
+**Parallel by default since v0.4.0.** The worker pool (`--workers`, default `NumCPU`) handles I/O-bound file processing. Benchmarks showed 4× improvement from 1 → NumCPU workers on 200-file repos. The SBOM mode processes files sequentially in walk order to produce deterministic output.
+
+**API stability from v1.0.0.** The `pkg/addlicense` surface is frozen under semantic versioning: renaming, removing, or changing the signature of any exported symbol is a breaking change requiring a v2.0.0 major bump. The `internal/` packages may evolve freely.

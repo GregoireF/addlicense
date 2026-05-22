@@ -66,6 +66,12 @@ addlicense --dry-run .
 # REUSE/FSFE compliance — emit SPDX-FileCopyrightText: instead of Copyright
 addlicense --license MIT --reuse .
 
+# Multiple copyright holders — comma-separated
+addlicense --license MIT --author "Alice, Bob" .
+
+# Show what would change without writing (JSON Lines output, exit 1 if changes needed)
+addlicense --diff .
+
 # Custom template
 addlicense --template ./header.txt .
 
@@ -80,7 +86,7 @@ addlicense --ignore "dist,vendor,*.gen.go" .
 | Flag | Short | Default | Description |
 | :-- | :-- | :-- | :-- |
 | `--license` | `-l` | `MIT` | SPDX license identifier |
-| `--author` | `-a` | — | Copyright holder |
+| `--author` | `-a` | — | Copyright holder (comma-separated for multiple: `"Alice, Bob"`) |
 | `--year` | `-y` | current year | Copyright year |
 | `--template` | `-t` | — | Path to a custom header template file |
 | `--ignore` | `-i` | see below | Comma-separated glob patterns to skip |
@@ -88,6 +94,7 @@ addlicense --ignore "dist,vendor,*.gen.go" .
 | `--remove` | `-R` | `false` | Strip existing license headers |
 | `--update` | `-u` | `false` | Replace headers in one pass (`--remove` + inject) |
 | `--dry-run` | `-n` | `false` | Preview changes without writing to disk |
+| `--diff` | | `false` | Emit JSON Lines with rendered header for each file that would change; no writes, exit 1 if any file would be modified |
 | `--verbose` | `-v` | `false` | Print every processed file, including already-licensed ones |
 | `--quiet` | `-q` | `false` | Suppress all stdout; errors still go to stderr |
 | `--format` | `-f` | `text` | Output format: `text` or `json` (JSON Lines) |
@@ -97,7 +104,7 @@ addlicense --ignore "dist,vendor,*.gen.go" .
 | `--dep5` | | `false` | Generate `.reuse/dep5` for files that cannot carry inline headers (images, binaries…) |
 | `--version` | | | Print version and build info |
 
-**Mutually exclusive:** `--verbose`/`--quiet` · `--check`/`--remove` · `--check`/`--update` · `--remove`/`--update`
+**Mutually exclusive:** `--verbose`/`--quiet` · `--check`/`--remove` · `--check`/`--update` · `--remove`/`--update` · `--diff`/`--check`
 
 **Default ignore list:** `vendor`, `node_modules`, `.git`, `dist`, `build`, `*.pb.go`, `*.gen.go`
 

@@ -18,6 +18,7 @@ import (
 const (
 	testAuthor       = "Grégoire"
 	testLicense      = "MIT"
+	testApache       = "Apache-2.0"
 	testMainGo       = "main.go"
 	testBody         = "package main\n"
 	testLicensedBody = "// SPDX-License-Identifier: MIT\n// Copyright 2026 Grégoire\n\npackage main\n"
@@ -112,7 +113,7 @@ func TestRun_PreservesShebang(t *testing.T) {
 		"deploy.sh": "#!/usr/bin/env bash\nset -euo pipefail\n",
 	})
 
-	if err := runner.Run(defaultOpts("Apache-2.0", root)); err != nil {
+	if err := runner.Run(defaultOpts(testApache, root)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -383,7 +384,7 @@ func TestRun_Reuse_EmitsSPDXFileCopyrightText(t *testing.T) {
 func TestRun_Reuse_NoAuthor(t *testing.T) {
 	root := makeProject(t, map[string]string{testMainGo: testBody})
 	opts := config.Options{
-		License: "Apache-2.0",
+		License: testApache,
 		Year:    2026,
 		Ignore:  config.DefaultIgnore,
 		Paths:   []string{root},
@@ -514,7 +515,7 @@ func TestRun_Update_ReplaceHeader(t *testing.T) {
 		testMainGo: testLicensedBody,
 	})
 	opts := config.Options{
-		License: "Apache-2.0",
+		License: testApache,
 		Author:  testAuthor,
 		Year:    2026,
 		Ignore:  config.DefaultIgnore,
@@ -565,7 +566,7 @@ func TestRun_DryRun_Update_WithHeader(t *testing.T) {
 	original := testLicensedBody
 	root := makeProject(t, map[string]string{testMainGo: original})
 	opts := config.Options{
-		License: "Apache-2.0",
+		License: testApache,
 		Author:  testAuthor,
 		Year:    2026,
 		Ignore:  config.DefaultIgnore,
@@ -978,7 +979,7 @@ func TestRun_ErrorOnReadOnlyFile_Update(t *testing.T) {
 	}
 
 	opts := config.Options{
-		License: "Apache-2.0",
+		License: testApache,
 		Author:  testAuthor,
 		Year:    2026,
 		Ignore:  config.DefaultIgnore,
@@ -1268,5 +1269,180 @@ func TestRun_MultipleRoots(t *testing.T) {
 		if !strings.Contains(content, "SPDX-License-Identifier: MIT") {
 			t.Errorf("%s: missing header", p)
 		}
+	}
+}
+
+// ── Multi-author ──────────────────────────────────────────────────────────────
+
+func TestRun_MultiAuthor_TwoAuthors(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	opts := config.Options{
+		License: testLicense,
+		Author:  "Alice, Bob",
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, testMainGo))
+	if !strings.Contains(content, "Copyright 2026 Alice") {
+		t.Errorf("expected 'Copyright 2026 Alice' in header:\n%s", content)
+	}
+	if !strings.Contains(content, "Copyright 2026 Bob") {
+		t.Errorf("expected 'Copyright 2026 Bob' in header:\n%s", content)
+	}
+	if !strings.Contains(content, "SPDX-License-Identifier: MIT") {
+		t.Errorf("expected SPDX identifier in header:\n%s", content)
+	}
+}
+
+func TestRun_MultiAuthor_Reuse(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	opts := config.Options{
+		License: testLicense,
+		Author:  "Alice,Bob",
+		Year:    2026,
+		Reuse:   true,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, testMainGo))
+	if !strings.Contains(content, "SPDX-FileCopyrightText: 2026 Alice") {
+		t.Errorf("expected SPDX-FileCopyrightText for Alice:\n%s", content)
+	}
+	if !strings.Contains(content, "SPDX-FileCopyrightText: 2026 Bob") {
+		t.Errorf("expected SPDX-FileCopyrightText for Bob:\n%s", content)
+	}
+}
+
+func TestRun_MultiAuthor_SingleAuthor_Unchanged(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	opts := defaultOpts(testLicense, root)
+	if err := runner.Run(opts); err != nil {
+		t.Fatal(err)
+	}
+	content := readFile(t, filepath.Join(root, testMainGo))
+	if strings.Contains(content, "\nCopyright") {
+		t.Errorf("single author should produce exactly one copyright line:\n%s", content)
+	}
+}
+
+// ── --diff ────────────────────────────────────────────────────────────────────
+
+func TestRun_Diff_NoWrite_ReturnsChangedCount(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	opts := config.Options{
+		License: testLicense,
+		Author:  testAuthor,
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Diff:    true,
+	}
+	err := runner.Run(opts)
+	if err == nil {
+		t.Fatal("expected non-nil error (file would be modified), got nil")
+	}
+	if !strings.Contains(err.Error(), "would be modified") {
+		t.Errorf("expected 'would be modified' in error, got: %v", err)
+	}
+	// File must not have been touched.
+	content := readFile(t, filepath.Join(root, testMainGo))
+	if content != testBody {
+		t.Errorf("--diff must not write to file:\n%s", content)
+	}
+}
+
+func TestRun_Diff_AlreadyLicensed_NoChange(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testLicensedBody})
+	opts := config.Options{
+		License: testLicense,
+		Author:  testAuthor,
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Diff:    true,
+	}
+	if err := runner.Run(opts); err != nil {
+		t.Errorf("all files already licensed, expected nil error, got: %v", err)
+	}
+}
+
+func TestRun_Diff_EmitsJSONWithHeader(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	opts := config.Options{
+		License: testLicense,
+		Author:  testAuthor,
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Diff:    true,
+	}
+
+	out := captureStdout(t, func() {
+		runner.Run(opts) //nolint:errcheck
+	})
+
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) == 0 || lines[0] == "" {
+		t.Fatal("expected at least one JSON line on stdout")
+	}
+	var rec struct {
+		File   string `json:"file"`
+		Status string `json:"status"`
+		Header string `json:"header"`
+	}
+	if err := json.Unmarshal([]byte(lines[0]), &rec); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, lines[0])
+	}
+	if rec.Status != "diff-add" {
+		t.Errorf("expected status=diff-add, got %q", rec.Status)
+	}
+	if !strings.Contains(rec.Header, "SPDX-License-Identifier") {
+		t.Errorf("header field should contain rendered header:\n%s", rec.Header)
+	}
+}
+
+func TestRun_Diff_Update_EmitsDiffUpdate(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testLicensedBody})
+	opts := config.Options{
+		License: testApache,
+		Author:  testAuthor,
+		Year:    2026,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Diff:    true,
+		Update:  true,
+	}
+
+	out := captureStdout(t, func() {
+		runner.Run(opts) //nolint:errcheck
+	})
+
+	if !strings.Contains(out, "diff-update") {
+		t.Errorf("expected diff-update in output:\n%s", out)
+	}
+	// File must be unchanged.
+	if content := readFile(t, filepath.Join(root, testMainGo)); content != testLicensedBody {
+		t.Errorf("--diff --update must not modify file:\n%s", content)
+	}
+}
+
+func TestRun_Diff_CheckConflict(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	opts := config.Options{
+		License:   testLicense,
+		Ignore:    config.DefaultIgnore,
+		Paths:     []string{root},
+		Diff:      true,
+		CheckOnly: true,
+	}
+	if err := runner.Run(opts); err == nil {
+		t.Error("--diff --check should return an error")
 	}
 }

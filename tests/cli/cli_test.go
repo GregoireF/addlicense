@@ -266,6 +266,69 @@ func TestCLI_Dep5(t *testing.T) {
 	}
 }
 
+// ── multi-author ──────────────────────────────────────────────────────────────
+
+func TestCLI_MultiAuthor(t *testing.T) {
+	dir := t.TempDir()
+	writeMainGo(t, dir, "package main\n")
+
+	_, _, code := run(t, "--license", "MIT", "--author", "Alice, Bob", dir)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d", code)
+	}
+
+	got, _ := os.ReadFile(filepath.Join(dir, "main.go"))
+	if !strings.Contains(string(got), "Copyright") || !strings.Contains(string(got), "Alice") {
+		t.Errorf("expected Alice copyright in header:\n%s", got)
+	}
+	if !strings.Contains(string(got), "Bob") {
+		t.Errorf("expected Bob copyright in header:\n%s", got)
+	}
+}
+
+// ── diff ──────────────────────────────────────────────────────────────────────
+
+func TestCLI_Diff_NoWrite_ExitsOne(t *testing.T) {
+	dir := t.TempDir()
+	writeMainGo(t, dir, "package main\n")
+
+	stdout, _, code := run(t, "--license", "MIT", "--author", "Test", "--diff", dir)
+	if code != 1 {
+		t.Fatalf("expected exit 1 (file would be modified), got %d", code)
+	}
+	// JSON with header field must be present.
+	if !strings.Contains(stdout, "diff-add") {
+		t.Errorf("expected 'diff-add' in stdout:\n%s", stdout)
+	}
+	if !strings.Contains(stdout, "header") {
+		t.Errorf("expected 'header' field in JSON:\n%s", stdout)
+	}
+	// File must be untouched.
+	got, _ := os.ReadFile(filepath.Join(dir, "main.go"))
+	if strings.Contains(string(got), "SPDX") {
+		t.Error("--diff must not write to file")
+	}
+}
+
+func TestCLI_Diff_AlreadyLicensed_ExitsZero(t *testing.T) {
+	dir := t.TempDir()
+	writeMainGo(t, dir, "// SPDX-License-Identifier: MIT\n// Copyright 2026 Test\n\npackage main\n")
+
+	_, _, code := run(t, "--diff", dir)
+	if code != 0 {
+		t.Fatalf("already-licensed file: expected exit 0, got %d", code)
+	}
+}
+
+func TestCLI_Diff_CheckConflict(t *testing.T) {
+	dir := t.TempDir()
+	writeMainGo(t, dir, "package main\n")
+	_, _, code := run(t, "--diff", "--check", dir)
+	if code == 0 {
+		t.Error("expected non-zero exit for --diff --check")
+	}
+}
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 // buildBinary compiles cmd/addlicense to a temp binary and returns its path

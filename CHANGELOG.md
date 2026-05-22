@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] — 2026-05-22
+
+### Added
+
+- **Multi-author support** — `--author` now accepts a comma-separated list of copyright holders (e.g. `--author "Alice, Bob"`). Each author gets its own copyright line in the rendered header; single-author behaviour is unchanged. Works with `--reuse` (emits `SPDX-FileCopyrightText:` per author) and `--year-range`.
+- **`--diff` flag** — emits JSON Lines (`{"file":"…","status":"diff-add|diff-update|diff-remove","header":"…"}`) for every file that would be modified, without writing to disk. Exit 1 if any file would change, exit 0 if the tree is already up to date. Designed for PR validation pipelines: "does this PR introduce files without license headers?" Mutually exclusive with `--check`.
+- **Error double-print fix** — `SilenceErrors: true` added to the Cobra root command; errors are now printed exactly once (by `main`) instead of twice (Cobra + main).
+- **Extended test suite**:
+  - `tests/integration/`: 9 new tests — multi-author (two authors, REUSE mode, single-author unchanged); `--diff` (no-write exit 1, already-licensed exit 0, JSON with header field, `--update` emits diff-update, `--check` conflict).
+  - `tests/cli/`: 4 new tests — `TestCLI_MultiAuthor`, `TestCLI_Diff_NoWrite_ExitsOne`, `TestCLI_Diff_AlreadyLicensed_ExitsZero`, `TestCLI_Diff_CheckConflict`.
+  - `internal/injector/bench_test.go` — 7 micro-benchmarks (HasHeader, Inject, Remove, ExtractYear, large-file variants).
+  - `tests/bench/pipeline_bench_test.go` — 12 pipeline benchmarks (Add/Check/Idempotent at scale, Workers 1/4/NumCPU).
+
+---
+
 ## [0.5.0] — 2026-05-20
 
 ### Added

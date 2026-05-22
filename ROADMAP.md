@@ -60,15 +60,36 @@ Header removal and power-user flags. `--remove` / `-R` strips existing headers; 
 ### v0.5.0 — 2026-05-20
 Ecosystem integrations. `--year-range` preserves the original copyright year during `--update`, emitting `YYYY-YYYY` ranges (opt-in, backward-compatible, composable with `--reuse`). `--dep5` generates a REUSE-compliant `.reuse/dep5` bulk-licence declaration for files that cannot carry inline headers (images, fonts, binaries). Native GitHub Action (`action.yml`) — composite action with OS/arch detection, binary downloaded from the GitHub Release tag, zero external services, `ubuntu-*` / `macos-*` / `windows-*` × amd64 + arm64.
 
+### v0.6.0 — 2026-05-22
+Multi-author and diff. `--author "Alice, Bob"` emits one copyright line per author, composable with `--reuse` and `--year-range`. `--diff` emits JSON Lines with the rendered header for each file that would change (no writes; exit 1 if any file would be modified) — designed for PR validation and compliance review without destructive writes. Quality: injector and pipeline benchmark suites, `SilenceErrors` fix (error no longer printed twice). 9 new integration tests, 4 new CLI tests.
+
 ---
 
 ## Planned versions
 
 ---
 
-### v0.6.0 — Multi-author and organisation workflows
+### v0.7.0 — Public API and SBOM groundwork
 
-**Target:** next minor release after v0.5.0. Focuses on team and enterprise use cases.
+**Target:** next minor release after v0.6.0. Focuses on making addlicense embeddable as a library.
+
+#### Error message audit (carry-over)
+
+Review remaining user-facing messages for consistency and actionability. The double-print regression (Cobra + main both printing) was fixed in v0.6.0; this milestone audits the remaining messages.
+
+#### Public Go API (`pkg/`)
+
+**What:** Expose `github.com/GregoireF/addlicense/pkg` with a stable, documented interface. Promotes mature `internal/` packages to public surface.
+
+**Justification:** The internals (injector, scanner, header) are stable. Making them public removes subprocess overhead for IDE plugins, CI runners, and code generators that embed addlicense programmatically.
+
+#### Multi-author `--update` merge semantics
+
+**What:** When `--update` is combined with multi-author, decide whether to append new authors to existing lines or replace. Currently `--update` in multi-author mode replaces all copyright lines. Define and document the merge policy.
+
+---
+
+### v0.6.0 content (now released — see Released section above)
 
 #### Multi-author copyright lines
 

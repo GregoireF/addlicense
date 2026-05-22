@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/GregoireF/addlicense/internal/config"
@@ -30,19 +31,24 @@ const (
 	actionWouldAdd    = "would-add"
 	actionWouldRemove = "would-remove"
 	actionWouldUpdate = "would-update"
+	actionDiffAdd     = "diff-add"
+	actionDiffUpdate  = "diff-update"
+	actionDiffRemove  = "diff-remove"
 )
 
 // fileResult holds the outcome of processing one file.
 type fileResult struct {
 	Path   string
 	Action string
+	Header string // populated by --diff: the rendered header that would be written
 	Err    error
 }
 
-// jsonRecord is the JSON Lines shape for --format json.
+// jsonRecord is the JSON Lines shape for --format json and --diff.
 type jsonRecord struct {
 	File   string `json:"file"`
 	Status string `json:"status"`
+	Header string `json:"header,omitempty"`
 	Error  string `json:"error,omitempty"`
 }
 
@@ -106,6 +112,9 @@ func validateOpts(opts *config.Options) error {
 	if opts.Format != "" && opts.Format != "text" && opts.Format != "json" {
 		return fmt.Errorf("--format must be \"text\" or \"json\", got %q", opts.Format)
 	}
+	if opts.Diff && opts.CheckOnly {
+		return fmt.Errorf("--diff and --check are mutually exclusive")
+	}
 	return nil
 }
 
@@ -158,6 +167,8 @@ func processFile(f scanner.File, opts config.Options, hData header.Data, tmplTex
 		return fileResult{Path: rel, Action: actionSkipped}
 	}
 	switch {
+	case opts.Diff:
+		return diffFile(rel, f.Path, lang, hData, tmplText, opts.Update, opts.Remove)
 	case opts.CheckOnly:
 		return checkFile(rel, f.Path)
 	case opts.Update:
@@ -255,8 +266,45 @@ func addFile(rel, path string, lang *header.Lang, hData header.Data, tmplText st
 	return fileResult{Path: rel, Action: actionAdded}
 }
 
+// diffFile reports what would be written without modifying the file.
+// It always emits JSON regardless of --format (diff is inherently structured).
+func diffFile(rel, path string, lang *header.Lang, hData header.Data, tmplText string, update, remove bool) fileResult {
+	has, err := injector.HasHeader(path)
+	if err != nil {
+		return fileResult{Path: rel, Action: actionError, Err: err}
+	}
+
+	switch {
+	case remove:
+		if !has {
+			return fileResult{Path: rel, Action: actionSkipped}
+		}
+		return fileResult{Path: rel, Action: actionDiffRemove}
+
+	case update:
+		rendered, err := header.Render(tmplText, hData, *lang)
+		if err != nil {
+			return fileResult{Path: rel, Action: actionError, Err: err}
+		}
+		if has {
+			return fileResult{Path: rel, Action: actionDiffUpdate, Header: rendered}
+		}
+		return fileResult{Path: rel, Action: actionDiffAdd, Header: rendered}
+
+	default: // add mode
+		if has {
+			return fileResult{Path: rel, Action: actionSkipped}
+		}
+		rendered, err := header.Render(tmplText, hData, *lang)
+		if err != nil {
+			return fileResult{Path: rel, Action: actionError, Err: err}
+		}
+		return fileResult{Path: rel, Action: actionDiffAdd, Header: rendered}
+	}
+}
+
 func handleResults(results <-chan fileResult, opts config.Options) error {
-	useJSON := opts.Format == "json"
+	useJSON := opts.Format == "json" || opts.Diff
 	var enc *json.Encoder
 	if useJSON {
 		enc = json.NewEncoder(os.Stdout)
@@ -264,6 +312,7 @@ func handleResults(results <-chan fileResult, opts config.Options) error {
 
 	var missing []string
 	var firstErr error
+	var diffChanged int
 
 	for r := range results {
 		emit(r, useJSON, enc, opts.Verbose, opts.Quiet)
@@ -274,6 +323,8 @@ func handleResults(results <-chan fileResult, opts config.Options) error {
 			if firstErr == nil {
 				firstErr = fmt.Errorf("%s: %w", r.Path, r.Err)
 			}
+		case actionDiffAdd, actionDiffUpdate, actionDiffRemove:
+			diffChanged++
 		}
 	}
 
@@ -283,12 +334,15 @@ func handleResults(results <-chan fileResult, opts config.Options) error {
 	if len(missing) > 0 {
 		return fmt.Errorf("%d file(s) missing license header", len(missing))
 	}
+	if diffChanged > 0 {
+		return fmt.Errorf("%d file(s) would be modified", diffChanged)
+	}
 	return nil
 }
 
 func emit(r fileResult, useJSON bool, enc *json.Encoder, verbose, quiet bool) {
 	if useJSON {
-		rec := jsonRecord{File: r.Path, Status: r.Action}
+		rec := jsonRecord{File: r.Path, Status: r.Action, Header: r.Header}
 		if r.Err != nil {
 			rec.Error = r.Err.Error()
 		}
@@ -303,6 +357,10 @@ func emit(r fileResult, useJSON bool, enc *json.Encoder, verbose, quiet bool) {
 	case actionWouldAdd, actionWouldRemove, actionWouldUpdate:
 		if !quiet {
 			fmt.Printf("[dry-run] %s: %s\n", r.Action, r.Path)
+		}
+	case actionDiffAdd, actionDiffUpdate, actionDiffRemove:
+		if !quiet {
+			fmt.Printf("[diff] %s: %s\n", r.Action, r.Path)
 		}
 	case actionMissing:
 		if !quiet {
@@ -362,9 +420,29 @@ func buildCopyrightLine(fromYear, year int, author string, reuse bool) string {
 	if fromYear > 0 && fromYear < year {
 		yearStr = fmt.Sprintf("%d-%d", fromYear, year)
 	}
-	line := fmt.Sprintf("%s %s", prefix, yearStr)
-	if author != "" {
-		line += " " + author
+
+	// Support comma-separated authors: "Alice, Bob" → two copyright lines.
+	authors := splitAuthors(author)
+	if len(authors) == 0 {
+		return fmt.Sprintf("%s %s", prefix, yearStr)
 	}
-	return line
+	lines := make([]string, len(authors))
+	for i, a := range authors {
+		lines[i] = fmt.Sprintf("%s %s %s", prefix, yearStr, a)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func splitAuthors(author string) []string {
+	if author == "" {
+		return nil
+	}
+	parts := strings.Split(author, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if t := strings.TrimSpace(p); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
 }

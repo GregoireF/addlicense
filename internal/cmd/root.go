@@ -23,16 +23,21 @@ func NewRootCmd(version, commit, date string) *cobra.Command {
 Examples:
   addlicense --license MIT .
   addlicense --license MIT --author "Grégoire" .
+  addlicense --license MIT --author "Alice, Bob" .
   addlicense --check .
   addlicense --remove .
   addlicense --update --license EUPL-1.2 .
+  addlicense --update --year-range .
+  addlicense --diff .
   addlicense --dry-run .
+  addlicense --dep5 --license MIT --author "Acme" .
   addlicense --check --format json .
   addlicense --template ./header.txt .
   addlicense --ignore dist,vendor .`,
-		Version:      version,
-		SilenceUsage: true,
-		Args:         cobra.MinimumNArgs(1),
+		Version:       version,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		Args:          cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Paths = args
 			return runner.Run(opts)
@@ -41,7 +46,7 @@ Examples:
 
 	// Core
 	root.Flags().StringVarP(&opts.License, "license", "l", "", "SPDX license identifier (e.g. MIT, Apache-2.0)")
-	root.Flags().StringVarP(&opts.Author, "author", "a", "", "Copyright holder name")
+	root.Flags().StringVarP(&opts.Author, "author", "a", "", "Copyright holder name (comma-separated for multiple: \"Alice, Bob\")")
 	root.Flags().StringVarP(&opts.Template, "template", "t", "", "Path to a custom header template file")
 	root.Flags().StringSliceVarP(&opts.Ignore, "ignore", "i", nil, "Comma-separated list of patterns to ignore")
 	root.Flags().IntVarP(&opts.Year, "year", "y", 0, "Copyright year (defaults to current year)")
@@ -51,6 +56,7 @@ Examples:
 	root.Flags().BoolVarP(&opts.Remove, "remove", "R", false, "Strip existing license headers")
 	root.Flags().BoolVarP(&opts.Update, "update", "u", false, "Replace existing headers with the new one (remove + inject)")
 	root.Flags().BoolVarP(&opts.DryRun, "dry-run", "n", false, "Preview changes without writing to disk")
+	root.Flags().BoolVar(&opts.Diff, "diff", false, "Emit JSON Lines with the rendered header for each file that would change (no writes; exit 1 if any file would be modified)")
 
 	// Compliance
 	root.Flags().BoolVarP(&opts.Reuse, "reuse", "r", false, "Emit SPDX-FileCopyrightText: instead of Copyright (REUSE/FSFE compliance)")

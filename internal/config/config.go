@@ -36,6 +36,7 @@ type Options struct {
 	Workers   int    // parallel workers; 0 = runtime.NumCPU()
 	YearRange bool   // emit "YYYY-YYYY" copyright range when updating files with an existing year
 	Dep5      bool   // generate .reuse/dep5 for files without inline header support
+	Diff      bool   // emit JSON Lines with the rendered header for each file that would change (no writes)
 }
 
 // fileConfig is the shape of .addlicenserc.yaml / .addlicenserc.json.

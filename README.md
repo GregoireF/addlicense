@@ -215,6 +215,43 @@ go test -bench=. -benchtime=3s ./internal/injector/ # injector micro-benchmarks
 
 ---
 
+## Go library (since v0.8.0)
+
+`addlicense` is importable as a Go library — no subprocess, no CLI:
+
+```go
+import addlicense "github.com/GregoireF/addlicense/pkg/addlicense"
+
+// Add MIT headers to all supported files under ./src
+err := addlicense.Run(addlicense.Options{
+    License: "MIT",
+    Author:  "Acme Corp",
+    Year:    2026,
+    Paths:   []string{"./src"},
+})
+
+// Check mode — returns non-nil error if any file is missing a header
+err = addlicense.Run(addlicense.Options{
+    CheckOnly: true,
+    Paths:     []string{"."},
+})
+```
+
+All CLI flags map to `Options` fields. The public API is a distinct type from internal types — the `internal/` packages may evolve without breaking callers.
+
+```go
+// Extend the default ignore list without modifying it
+opts := addlicense.Options{
+    License: "Apache-2.0",
+    Paths:   []string{"."},
+}
+opts.Ignore = append(append([]string{}, addlicense.DefaultIgnore...), "testdata")
+```
+
+See [pkg/addlicense/addlicense.go](pkg/addlicense/addlicense.go) for the full API reference and [pkg.go.dev](https://pkg.go.dev/github.com/GregoireF/addlicense/pkg/addlicense) for documentation.
+
+---
+
 ## Contributing
 
 Issues and PRs are welcome. Quick start:

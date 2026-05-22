@@ -66,32 +66,42 @@ Multi-author and diff. `--author "Alice, Bob"` emits one copyright line per auth
 ### v0.7.0 — 2026-05-22
 Security and correctness. `injector.Inject` and `injector.Remove` now preserve original file permissions — executable scripts (`chmod +x`) no longer silently lose their execute bit after a run. Coverage raised from 89.1% to 90.4% by covering `diffFile` error paths and removing dead code in `emit`. `--ignore` and multi-author `--update` semantics documented.
 
+### v0.8.0 — 2026-05-22
+Public Go API. `github.com/GregoireF/addlicense/pkg/addlicense` exposes `Options` and `Run` as a stable, documented library interface. Distinct struct (not type alias) keeps the `internal/` packages free to evolve without breaking callers. `DefaultIgnore`, `FormatText`, `FormatJSON` constants re-exported. 12 public API tests added. README updated with library usage examples.
+
 ---
 
 ## Planned versions
 
 ---
 
-### v0.8.0 — Public API
+### v0.9.0 — Language expansion and config ergonomics
 
-**Target:** next minor release after v0.7.0. Makes addlicense embeddable as a library and lays the groundwork for v1.0.0 API freeze.
+**Target:** next minor release after v0.8.0.
 
-#### Public Go API (`pkg/`)
+#### Extended language support
 
-**What:** Expose `github.com/GregoireF/addlicense/pkg` with a stable, documented interface. Clean public types (`pkg.Options`, `pkg.Run`) backed by the mature `internal/` implementation.
+**What:** Add support for commonly requested file types:
+- Markdown (`.md`) — HTML comment header `<!-- -->` (already supported via `.html` style; needs explicit mapping)
+- Dockerfile — `#` line comments
+- Makefile — `#` line comments  
+- Nix (`.nix`) — `#` line comments
+- Zig (`.zig`) — `//` line comments
+- Lua (`.lua`) — `--` line comments
 
-**Justification:** The internals (injector, scanner, header, runner) are now stable and well-tested (90%+ coverage). Making a `pkg/` surface removes subprocess overhead for IDE plugins, CI runners, and code generators.
+**Justification:** These appear regularly in multi-language monorepos. Each addition is < 5 lines in the `langs` map.
 
-**Design decision:** `pkg.Options` will be a distinct struct (not a type alias for `config.Options`) to allow internal evolution without breaking the public API. A thin conversion layer maps `pkg.Options → config.Options` internally.
+**Cons:** None significant — fully backward-compatible, zero new flags, zero new dependencies.
 
-**Pros:**
-- Clean API boundary; internal packages can refactor freely.
-- `pkg.go.dev` documentation for Go library consumers.
-- Enables IDE extensions (LSP servers, editor plugins) to embed addlicense natively.
+#### `--author-file` flag
 
-**Cons:**
-- Maintaining two `Options` structs until v2.0.0.
-- Risk of API decisions we'll regret at v1.0.0 — must design carefully.
+**What:** Read copyright holders from a file (one per line), equivalent to passing all of them via `--author`.
+
+**Justification:** Large organisations maintain contributor lists in `AUTHORS` or `CODEOWNERS` files. Passing 30 names on the command line is impractical. A `--author-file AUTHORS` flag composes with `--update` and `--reuse` naturally.
+
+**Pros:** No new data model — internally it just populates `Options.Author` with a comma-joined string. Clean UX for monorepos.
+
+**Cons:** File parsing adds one more I/O error path. Must handle blank lines and `#` comments gracefully.
 
 ---
 

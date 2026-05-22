@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.0] — 2026-05-22
+
+### Added
+
+- **Public Go API (`pkg/addlicense`)** — `addlicense` is now importable as a Go library without invoking a subprocess. Import path: `github.com/GregoireF/addlicense/pkg/addlicense`. The public surface is a distinct `Options` struct and a `Run(Options) error` function, backed by the mature `internal/` implementation. This allows IDE plugins, CI runners, and code generators to embed addlicense natively.
+  - `Options` mirrors all CLI flags: `License`, `Author`, `Template`, `Ignore`, `Year`, `Paths`, `CheckOnly`, `Reuse`, `Remove`, `Update`, `DryRun`, `Diff`, `YearRange`, `Dep5`, `Verbose`, `Quiet`, `Format`, `Workers`.
+  - `DefaultIgnore` re-exported from `internal/config` so callers can extend without modifying the original slice.
+  - `FormatText` and `FormatJSON` constants for the `Format` field.
+  - A thin `toInternal` conversion layer maps `pkg.Options → config.Options`; `internal/` packages can refactor freely without breaking the public API.
+- **`pkg/addlicense/addlicense_test.go`** — 12 tests covering: licensed/unlicensed check mode, header injection, idempotence, diff mode (no write), dry run (no write), remove, REUSE mode, multi-author, and mutual-exclusion validation.
+
+---
+
 ## [0.7.0] — 2026-05-22
 
 ### Fixed

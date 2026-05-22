@@ -106,8 +106,9 @@ func Build(doc Document) string {
 			copyrightText = noAssertion
 		}
 
-		// Normalise path separator and prefix with "./"
-		rel := filepath.ToSlash(e.Path)
+		// Normalise path separator: always forward slashes regardless of OS
+		// (filepath.ToSlash is a no-op on Linux where \ is a valid filename char).
+		rel := strings.ReplaceAll(e.Path, "\\", "/")
 		if !strings.HasPrefix(rel, "./") && !strings.HasPrefix(rel, "/") {
 			rel = "./" + rel
 		}

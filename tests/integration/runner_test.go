@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -1686,5 +1687,65 @@ func TestRun_Sbom_Stdout(t *testing.T) {
 	})
 	if !strings.Contains(out, "SPDXVersion: SPDX-2.3") {
 		t.Errorf("expected SPDX output on stdout:\n%s", out)
+	}
+}
+
+func TestRun_Sbom_DotPath_UsesProjectDocName(t *testing.T) {
+	root := makeProject(t, map[string]string{testMainGo: testLicensedBody})
+	out := filepath.Join(t.TempDir(), "sbom.spdx")
+	orig, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(orig) }()
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	if err := runner.Run(config.Options{
+		License: testLicense,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{"."},
+		Sbom:    out,
+	}); err != nil {
+		t.Fatalf("Run --sbom .: %v", err)
+	}
+	content := readFile(t, out)
+	// filepath.Base(".") == "." → sbomRun falls back to "project"
+	if !strings.Contains(content, "DocumentName: project") {
+		t.Errorf("expected DocumentName 'project' for '.' path:\n%s", content)
+	}
+}
+
+func TestRun_Sbom_InvalidPath_ReturnsError(t *testing.T) {
+	err := runner.Run(config.Options{
+		License: testLicense,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{"/nonexistent/sbom/path/xyz"},
+		Sbom:    filepath.Join(t.TempDir(), "sbom.spdx"),
+	})
+	if err == nil {
+		t.Error("expected error for nonexistent path, got nil")
+	}
+}
+
+func TestRun_Sbom_UnreadableFile_ReturnsError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("chmod 000 not enforced for file reads on Windows")
+	}
+	root := makeProject(t, map[string]string{testMainGo: testBody})
+	path := filepath.Join(root, testMainGo)
+	if err := os.Chmod(path, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chmod(path, 0o644) }()
+
+	err := runner.Run(config.Options{
+		License: testLicense,
+		Ignore:  config.DefaultIgnore,
+		Paths:   []string{root},
+		Sbom:    filepath.Join(t.TempDir(), "sbom.spdx"),
+	})
+	if err == nil {
+		t.Error("expected error for unreadable file, got nil")
 	}
 }

@@ -30,8 +30,15 @@ func TestLangFor(t *testing.T) {
 		{".css", true},
 		{".scss", true},
 		{".sql", true},
+		// v0.9.0 additions
+		{".lua", true},
+		{".nix", true},
+		{".zig", true},
+		{".dockerfile", true},
+		{".mk", true},
+		{".md", true},
+		{".mdx", true},
 		// unsupported
-		{".md", false},
 		{".json", false},
 	}
 	for _, tc := range cases {

@@ -5,6 +5,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/GregoireF/addlicense/internal/config"
 	"github.com/GregoireF/addlicense/internal/runner"
@@ -14,6 +16,7 @@ import (
 // NewRootCmd builds the root Cobra command wired up with all flags and version info.
 func NewRootCmd(version, commit, date string) *cobra.Command {
 	var opts config.Options
+	var authorFile string
 
 	root := &cobra.Command{
 		Use:   "addlicense [flags] [path...]",
@@ -39,6 +42,20 @@ Examples:
 		SilenceErrors: true,
 		Args:          cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if authorFile != "" {
+				if opts.Author != "" {
+					return fmt.Errorf("--author and --author-file are mutually exclusive")
+				}
+				data, err := os.ReadFile(authorFile)
+				if err != nil {
+					return fmt.Errorf("--author-file: %w", err)
+				}
+				authors := parseAuthorFile(string(data))
+				if len(authors) == 0 {
+					return fmt.Errorf("--author-file: no authors found in %s", authorFile)
+				}
+				opts.Author = strings.Join(authors, ", ")
+			}
 			opts.Paths = args
 			return runner.Run(opts)
 		},
@@ -47,6 +64,7 @@ Examples:
 	// Core
 	root.Flags().StringVarP(&opts.License, "license", "l", "", "SPDX license identifier (e.g. MIT, Apache-2.0)")
 	root.Flags().StringVarP(&opts.Author, "author", "a", "", "Copyright holder name (comma-separated for multiple: \"Alice, Bob\")")
+	root.Flags().StringVar(&authorFile, "author-file", "", "Path to a file listing copyright holders, one per line (mutually exclusive with --author)")
 	root.Flags().StringVarP(&opts.Template, "template", "t", "", "Path to a custom header template file")
 	root.Flags().StringSliceVarP(&opts.Ignore, "ignore", "i", nil, "Comma-separated list of patterns to ignore")
 	root.Flags().IntVarP(&opts.Year, "year", "y", 0, "Copyright year (defaults to current year)")
@@ -76,4 +94,18 @@ Examples:
 	root.SetVersionTemplate(fmt.Sprintf("addlicense %s\nbuild: %s @ %s\n", version, commit, date))
 
 	return root
+}
+
+// parseAuthorFile reads copyright holders from file content, one per line.
+// Lines starting with '#' and blank lines are ignored.
+func parseAuthorFile(content string) []string {
+	var authors []string
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		authors = append(authors, line)
+	}
+	return authors
 }

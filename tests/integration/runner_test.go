@@ -201,15 +201,15 @@ func TestRun_IgnoresVendorAndNodeModules(t *testing.T) {
 func TestRun_SkipsUnsupportedExtensions(t *testing.T) {
 	root := makeProject(t, map[string]string{
 		testMainGo:  testBody,
-		"README.md": "# hello\n",
 		"data.json": "{}\n",
+		"image.png": "\x89PNG\r\n",
 	})
 
 	if err := runner.Run(defaultOpts(testLicense, root)); err != nil {
 		t.Fatal(err)
 	}
 
-	for _, rel := range []string{"README.md", "data.json"} {
+	for _, rel := range []string{"data.json", "image.png"} {
 		content := readFile(t, filepath.Join(root, rel))
 		if strings.Contains(content, "SPDX-License-Identifier") {
 			t.Errorf("%s should not have been touched", rel)
@@ -1539,5 +1539,77 @@ func TestRun_Diff_BadTemplate_Update_Error(t *testing.T) {
 	}
 	if err := runner.Run(opts); err == nil {
 		t.Error("expected error for malformed template in --diff --update mode")
+	}
+}
+
+// v0.9.0: new language extensions
+
+func TestRun_NewLang_Lua(t *testing.T) {
+	root := makeProject(t, map[string]string{"init.lua": "return {}\n"})
+	if err := runner.Run(config.Options{
+		License: testLicense, Author: testAuthor, Year: 2026,
+		Ignore: config.DefaultIgnore, Paths: []string{root}, Quiet: true,
+	}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	got := readFile(t, filepath.Join(root, "init.lua"))
+	if !strings.Contains(got, "-- Copyright") {
+		t.Errorf("expected Lua line comment, got:\n%s", got)
+	}
+}
+
+func TestRun_NewLang_Nix(t *testing.T) {
+	root := makeProject(t, map[string]string{"default.nix": "{ pkgs }: {}\n"})
+	if err := runner.Run(config.Options{
+		License: testLicense, Author: testAuthor, Year: 2026,
+		Ignore: config.DefaultIgnore, Paths: []string{root}, Quiet: true,
+	}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	got := readFile(t, filepath.Join(root, "default.nix"))
+	if !strings.Contains(got, "# Copyright") {
+		t.Errorf("expected Nix hash comment, got:\n%s", got)
+	}
+}
+
+func TestRun_NewLang_Zig(t *testing.T) {
+	root := makeProject(t, map[string]string{"main.zig": "const std = @import(\"std\");\n"})
+	if err := runner.Run(config.Options{
+		License: testLicense, Author: testAuthor, Year: 2026,
+		Ignore: config.DefaultIgnore, Paths: []string{root}, Quiet: true,
+	}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	got := readFile(t, filepath.Join(root, "main.zig"))
+	if !strings.Contains(got, "// Copyright") {
+		t.Errorf("expected Zig line comment, got:\n%s", got)
+	}
+}
+
+func TestRun_NewLang_Dockerfile(t *testing.T) {
+	root := makeProject(t, map[string]string{"app.dockerfile": "FROM scratch\n"})
+	if err := runner.Run(config.Options{
+		License: testLicense, Author: testAuthor, Year: 2026,
+		Ignore: config.DefaultIgnore, Paths: []string{root}, Quiet: true,
+	}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	got := readFile(t, filepath.Join(root, "app.dockerfile"))
+	if !strings.Contains(got, "# Copyright") {
+		t.Errorf("expected Dockerfile hash comment, got:\n%s", got)
+	}
+}
+
+func TestRun_NewLang_Markdown(t *testing.T) {
+	root := makeProject(t, map[string]string{"README.md": "# Hello\n"})
+	if err := runner.Run(config.Options{
+		License: testLicense, Author: testAuthor, Year: 2026,
+		Ignore: config.DefaultIgnore, Paths: []string{root}, Quiet: true,
+	}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	got := readFile(t, filepath.Join(root, "README.md"))
+	if !strings.Contains(got, "<!--") || !strings.Contains(got, "-->") {
+		t.Errorf("expected HTML comment in Markdown, got:\n%s", got)
 	}
 }

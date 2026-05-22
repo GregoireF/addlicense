@@ -329,6 +329,73 @@ func TestCLI_Diff_CheckConflict(t *testing.T) {
 	}
 }
 
+// v0.9.0: --author-file
+
+func TestCLI_AuthorFile_InjectsAllAuthors(t *testing.T) {
+	dir := t.TempDir()
+	writeMainGo(t, dir, "package main\n")
+
+	authorsFile := filepath.Join(t.TempDir(), "AUTHORS")
+	if err := os.WriteFile(authorsFile, []byte("Alice Dupont\n# comment\nBob Martin\n\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, code := run(t, "--license", "MIT", "--author-file", authorsFile, dir)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d", code)
+	}
+
+	got, _ := os.ReadFile(filepath.Join(dir, "main.go"))
+	content := string(got)
+	if !strings.Contains(content, "Alice Dupont") {
+		t.Errorf("Alice not in header:\n%s", content)
+	}
+	if !strings.Contains(content, "Bob Martin") {
+		t.Errorf("Bob not in header:\n%s", content)
+	}
+}
+
+func TestCLI_AuthorFile_MutualExclusionWithAuthor(t *testing.T) {
+	dir := t.TempDir()
+	writeMainGo(t, dir, "package main\n")
+
+	authorsFile := filepath.Join(t.TempDir(), "AUTHORS")
+	if err := os.WriteFile(authorsFile, []byte("Alice\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, code := run(t, "--license", "MIT", "--author", "Bob", "--author-file", authorsFile, dir)
+	if code == 0 {
+		t.Error("expected non-zero exit for --author + --author-file")
+	}
+}
+
+func TestCLI_AuthorFile_NotFound(t *testing.T) {
+	dir := t.TempDir()
+	writeMainGo(t, dir, "package main\n")
+
+	_, _, code := run(t, "--license", "MIT", "--author-file", "/nonexistent/AUTHORS", dir)
+	if code == 0 {
+		t.Error("expected non-zero exit for missing author file")
+	}
+}
+
+func TestCLI_AuthorFile_Empty_Error(t *testing.T) {
+	dir := t.TempDir()
+	writeMainGo(t, dir, "package main\n")
+
+	authorsFile := filepath.Join(t.TempDir(), "AUTHORS")
+	// Only comments and blank lines — no actual authors.
+	if err := os.WriteFile(authorsFile, []byte("# just a comment\n\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, code := run(t, "--license", "MIT", "--author-file", authorsFile, dir)
+	if code == 0 {
+		t.Error("expected non-zero exit for empty author file")
+	}
+}
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 // buildBinary compiles cmd/addlicense to a temp binary and returns its path

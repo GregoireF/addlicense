@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.0] — 2026-05-22
+
+### Added
+
+- **Extended language support** — 8 new file types recognised out of the box:
+
+  | Extension(s) | Comment style | Language |
+  | :-- | :-- | :-- |
+  | `.lua` | `-- line` | Lua |
+  | `.nix` | `# line` | Nix |
+  | `.zig` | `// line` | Zig |
+  | `.dockerfile` | `# line` | Dockerfile (named variants, e.g. `app.dockerfile`) |
+  | `.mk` | `# line` | Makefile fragments |
+  | `.md` `.mdx` | `<!-- block -->` | Markdown / MDX (HTML comments are invisible in rendered output) |
+
+- **`--author-file` flag** — reads copyright holders from a text file, one per line. Lines starting with `#` and blank lines are ignored. Mutually exclusive with `--author`. Useful for organisations that maintain an `AUTHORS` file or CODEOWNERS list.
+
+  ```
+  # AUTHORS
+  Alice Dupont
+  Bob Martin
+  ```
+
+  ```bash
+  addlicense --license MIT --author-file AUTHORS .
+  ```
+
+- **Extended test suite**:
+  - `internal/header`: 7 new `TestLangFor` cases for new extensions.
+  - `tests/integration`: 5 new tests — `TestRun_NewLang_Lua`, `_Nix`, `_Zig`, `_Dockerfile`, `_Markdown`.
+  - `tests/cli`: 4 new tests — `TestCLI_AuthorFile_InjectsAllAuthors`, `_MutualExclusionWithAuthor`, `_NotFound`, `_Empty_Error`.
+
+---
+
 ## [0.8.0] — 2026-05-22
 
 ### Added

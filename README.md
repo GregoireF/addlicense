@@ -69,6 +69,9 @@ addlicense --license MIT --reuse .
 # Multiple copyright holders — comma-separated
 addlicense --license MIT --author "Alice, Bob" .
 
+# Multiple copyright holders from a file (one per line, # comments ignored)
+addlicense --license MIT --author-file AUTHORS .
+
 # Show what would change without writing (JSON Lines output, exit 1 if changes needed)
 addlicense --diff .
 
@@ -102,9 +105,10 @@ addlicense --ignore "dist,vendor,*.gen.go" .
 | `--reuse` | `-r` | `false` | [REUSE/FSFE](https://reuse.software/) mode — emit `SPDX-FileCopyrightText:` |
 | `--year-range` | | `false` | Preserve original copyright year on `--update` — emits `YYYY-YYYY` range |
 | `--dep5` | | `false` | Generate `.reuse/dep5` for files that cannot carry inline headers (images, binaries…) |
+| `--author-file` | | — | Path to a file listing copyright holders, one per line (mutually exclusive with `--author`) |
 | `--version` | | | Print version and build info |
 
-**Mutually exclusive:** `--verbose`/`--quiet` · `--check`/`--remove` · `--check`/`--update` · `--remove`/`--update` · `--diff`/`--check`
+**Mutually exclusive:** `--verbose`/`--quiet` · `--check`/`--remove` · `--check`/`--update` · `--remove`/`--update` · `--diff`/`--check` · `--author`/`--author-file`
 
 **Default ignore list:** `vendor`, `node_modules`, `.git`, `dist`, `build`, `*.pb.go`, `*.gen.go`
 
@@ -118,11 +122,11 @@ addlicense --ignore "dist,vendor,*.gen.go" .
 
 | Extensions | Comment style |
 | :-- | :-- |
-| `.go` `.ts` `.tsx` `.js` `.jsx` `.rs` `.swift` `.kt` `.scala` `.php` `.cs` `.proto` | `// line` |
+| `.go` `.ts` `.tsx` `.js` `.jsx` `.rs` `.swift` `.kt` `.scala` `.php` `.cs` `.proto` `.zig` | `// line` |
 | `.java` `.c` `.cpp` `.h` `.css` `.scss` | `/* block */` |
-| `.html` `.vue` `.svelte` | `<!-- block -->` |
-| `.py` `.sh` `.bash` `.yaml` `.yml` `.tf` `.toml` `.rb` | `# line` |
-| `.sql` | `-- line` |
+| `.html` `.vue` `.svelte` `.md` `.mdx` | `<!-- block -->` |
+| `.py` `.sh` `.bash` `.yaml` `.yml` `.tf` `.toml` `.rb` `.nix` `.dockerfile` `.mk` | `# line` |
+| `.sql` `.lua` | `-- line` |
 
 [Request a language](https://github.com/GregoireF/addlicense/issues/new?template=feature_request.md) — adding one takes < 5 minutes (see [Wiki: Adding a Language](../../wiki/Adding-a-Language)).
 

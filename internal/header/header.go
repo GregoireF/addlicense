@@ -59,6 +59,16 @@ var langs = map[string]Lang{
 	".rb":   {LineComment: "#"},
 	// Data
 	".sql": {LineComment: "--"},
+	// Scripting / systems
+	".lua": {LineComment: "--"},
+	".nix": {LineComment: "#"},
+	".zig": {LineComment: "//"},
+	// Build / containers
+	".dockerfile": {LineComment: "#"},
+	".mk":         {LineComment: "#"},
+	// Documentation
+	".md":  htmlComment,
+	".mdx": htmlComment,
 }
 
 // LangFor returns the comment style for ext (e.g. ".go"), or nil if unsupported.

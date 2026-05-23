@@ -35,3 +35,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      # Notify downstream repos so they can publish their own release artifacts.
+      # DISPATCH_TOKEN must be a PAT with public_repo scope on each target repo.
+      # Set it in the addlicense repo secrets (IaC: terraform/github/secrets.tf).
+      - name: Dispatch to ecosystem repos
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+          VERSION:  ${{ github.ref_name }}
+        run: |
+          for repo in addlicense-action addlicense-npm addlicense-winget; do
+            echo "Dispatching addlicense-released to GregoireF/${repo} @ ${VERSION}"
+            gh api "repos/GregoireF/${repo}/dispatches" \
+              --method POST \
+              --field event_type=addlicense-released \
+              --field "client_payload[version]=${VERSION}"
+          done

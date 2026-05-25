@@ -1,2 +1,21 @@
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Grégoire Favreau
 license: MIT
 author: "Grégoire Favreau"
+year: 2026
+ignore:
+  - vendor
+  - node_modules
+  - .git
+  - dist
+  - build
+  - "*.pb.go"
+  - "*.gen.go"
+  - "*.md"
+  - LICENSE
+  - .gitignore
+  - .addlicenserc.yaml
+  - ".github/CODEOWNERS"
+  - go.sum
+  - cov
+  - coverage

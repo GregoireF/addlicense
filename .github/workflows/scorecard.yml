@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: MIT
+# Copyright 2026 Grégoire Favreau
+name: security · scorecard
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '30 1 * * 1'  # Every Monday at 01:30 UTC
+  workflow_dispatch: {}
+
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+      actions: read
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: ossf/scorecard-action@f49aabe0b5af0936a0987cfb85d86b75d087d38d # v2.4.1
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+
+      - uses: github/codeql-action/upload-sarif@ce28f5bb42b7a9f2c824e633a3f6ee835bab6858 # v3.28.3
+        with:
+          sarif_file: results.sarif

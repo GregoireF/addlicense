@@ -119,7 +119,7 @@ addlicense --ignore "dist,vendor,*.gen.go" .
 
 **Default ignore list:** `vendor`, `node_modules`, `.git`, `dist`, `build`, `*.pb.go`, `*.gen.go`
 
-**`--ignore` matching rules:** Each pattern is tested as a glob against the file name and each path segment (e.g. `vendor` ignores any file under a `vendor/` directory at any depth). Patterns without wildcards also match as substrings of the full path (e.g. `generated` matches `auto_generated.go`). Glob patterns like `*.pb.go` use standard shell globbing.
+**`--ignore` matching rules:** Each pattern is tested against the relative file path and the basename. `**` doublestar patterns are supported (`**/generated/**`, `docs/**/*.md`). Simple glob patterns (`*.pb.go`) match files at any depth. Plain strings without wildcards also match as substrings (`generated` matches `auto_generated.go`).
 
 **Multi-author with `--update`:** `--update` replaces the entire existing header with the new one. If `--author "Alice, Bob"` is set, the result is two copyright lines for Alice and Bob — the previous author is not preserved. To keep an existing author, include them in the `--author` list.
 
@@ -169,10 +169,10 @@ ignore:
 
 ## CI integration
 
-**GitHub Action** (since v0.5.0 — recommended)
+**GitHub Action** (recommended)
 
 ```yaml
-- uses: GregoireF/addlicense@v0.5.0
+- uses: GregoireF/addlicense-action@v1
   with:
     args: --check .
 ```
@@ -284,6 +284,19 @@ opts.Ignore = append(append([]string{}, addlicense.DefaultIgnore...), "testdata"
 ```
 
 See [pkg/addlicense/addlicense.go](pkg/addlicense/addlicense.go) for the full API reference and [pkg.go.dev](https://pkg.go.dev/github.com/GregoireF/addlicense/pkg/addlicense) for documentation.
+
+---
+
+## Ecosystem
+
+| Package | Description |
+| :-- | :-- |
+| [GregoireF/addlicense-action](https://github.com/GregoireF/addlicense-action) | GitHub Action — add, check, and remove headers in CI |
+| [GregoireF/addlicense-npm](https://github.com/GregoireF/addlicense-npm) | npm package — `@gregoiref/addlicense` for Node.js projects and CI |
+| [GregoireF/addlicense-winget](https://github.com/GregoireF/addlicense-winget) | WinGet manifests — `winget install GregoireF.addlicense` |
+| [GregoireF/homebrew-tap](https://github.com/GregoireF/homebrew-tap) | Homebrew tap — `brew install GregoireF/tap/addlicense` |
+
+All ecosystem packages are versioned in sync with the core binary and updated automatically on each release.
 
 ---
 

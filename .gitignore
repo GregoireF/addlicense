@@ -11,10 +11,11 @@ vendor/
 /coverage
 tests/integration/.reuse/
 
-# IDE
+# IDE / tools
 .idea/
 .vscode/
 *.swp
+.claude/
 
 # OS
 .DS_Store

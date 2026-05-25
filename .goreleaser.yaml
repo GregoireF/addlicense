@@ -40,7 +40,7 @@ changelog:
   sort: asc
   filters:
     exclude:
-      - "^chore(deps)"
+      - "^chore\\(deps\\)"
       - "^ci:"
       - "Merge pull request"
       - "Merge branch"

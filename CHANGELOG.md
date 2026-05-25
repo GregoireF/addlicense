@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] — 2026-05-25
+
+### Fixed
+
+- **`--ignore` doublestar (`**`) glob patterns** — patterns like `**/generated/**`, `docs/**/*.md`, and `**/node_modules` now resolve correctly at any directory depth. The scanner previously used `filepath.Match`, which silently ignored `**` patterns. It now uses [`github.com/bmatcuk/doublestar/v4`](https://github.com/bmatcuk/doublestar) for both relative-path and basename matching. Simple glob patterns (`*.pb.go`) and substring patterns (`generated`) continue to work unchanged.
+
+### Improved
+
+- **Ecosystem documentation** — README now includes an Ecosystem section linking `addlicense-action`, `addlicense-npm`, `addlicense-winget`, and the Homebrew tap. The GitHub Action example was corrected (`GregoireF/addlicense-action@v1`, not the core repo).
+
+---
+
 ## [1.0.0] — 2026-05-22
 
 ### Added

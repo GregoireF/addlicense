@@ -6,6 +6,7 @@ package scanner_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/GregoireF/addlicense/internal/scanner"
@@ -192,6 +193,67 @@ func TestWalk_CollectsMarkdownAndJSON(t *testing.T) {
 	if !exts[".md"] {
 		t.Error("scanner should collect .md files (language filtering happens in runner)")
 	}
+}
+
+func TestWalk_DoubleStar(t *testing.T) {
+	root := t.TempDir()
+
+	tree := map[string]string{
+		"main.go":                  "package main",
+		"docs/intro.md":            "# intro",
+		"docs/api/reference.md":    "# ref",
+		"internal/gen/model.pb.go": "// generated",
+		"internal/app/app.go":      "package app",
+	}
+	for rel, content := range tree {
+		p := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	t.Run("doublestar dir skip", func(t *testing.T) {
+		found, err := scanner.Walk([]string{root}, []string{"**/docs"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range found {
+			if strings.Contains(filepath.ToSlash(f.Path), "/docs/") {
+				t.Errorf("docs/ should be skipped by **/docs pattern: %s", f.Path)
+			}
+		}
+	})
+
+	t.Run("doublestar file pattern", func(t *testing.T) {
+		found, err := scanner.Walk([]string{root}, []string{"**/*.pb.go"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range found {
+			if strings.HasSuffix(f.Path, ".pb.go") {
+				t.Errorf("*.pb.go at any depth should be skipped: %s", f.Path)
+			}
+		}
+		// model.pb.go must be absent; all other 4 files remain
+		if len(found) != 4 {
+			t.Errorf("expected 4 files, got %d: %v", len(found), found)
+		}
+	})
+
+	t.Run("doublestar subpath", func(t *testing.T) {
+		found, err := scanner.Walk([]string{root}, []string{"docs/**"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, f := range found {
+			if strings.Contains(filepath.ToSlash(f.Path), "/docs/") {
+				t.Errorf("docs/** should skip all files under docs/: %s", f.Path)
+			}
+		}
+	})
 }
 
 func contains(s, sub string) bool {

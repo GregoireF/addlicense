@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 // File represents a source file found by the scanner.
@@ -27,9 +29,10 @@ func Walk(roots []string, ignore []string) ([]File, error) {
 			}
 
 			name := d.Name()
+			relPath, _ := filepath.Rel(root, path)
 
 			if d.IsDir() {
-				if shouldIgnore(name, ignore) {
+				if shouldIgnore(name, relPath, ignore) {
 					return filepath.SkipDir
 				}
 				return nil
@@ -44,7 +47,7 @@ func Walk(roots []string, ignore []string) ([]File, error) {
 				return nil
 			}
 
-			if shouldIgnore(name, ignore) || shouldIgnore(path, ignore) {
+			if shouldIgnore(name, relPath, ignore) {
 				return nil
 			}
 
@@ -59,12 +62,19 @@ func Walk(roots []string, ignore []string) ([]File, error) {
 	return files, nil
 }
 
-func shouldIgnore(name string, patterns []string) bool {
+func shouldIgnore(name, relPath string, patterns []string) bool {
+	rel := filepath.ToSlash(relPath)
 	for _, p := range patterns {
-		matched, err := filepath.Match(p, name)
-		if err == nil && matched {
+		pat := filepath.ToSlash(p)
+		// Match relative path — handles ** doublestar patterns across directories.
+		if matched, _ := doublestar.Match(pat, rel); matched {
 			return true
 		}
+		// Match basename — *.pb.go applies at any depth without a path prefix.
+		if matched, _ := doublestar.Match(pat, name); matched {
+			return true
+		}
+		// Substring match for plain non-glob patterns (e.g. "generated" → "auto_generated.go").
 		if strings.Contains(name, p) {
 			return true
 		}

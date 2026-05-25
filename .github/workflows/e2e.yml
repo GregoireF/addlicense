@@ -37,9 +37,8 @@ jobs:
             echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
           fi
 
-      # Test the action itself using uses: ./ with an explicit version override
-      - name: Install via action (action self-test)
-        uses: ./
+      - name: Install via addlicense-action
+        uses: GregoireF/addlicense-action@ee7bf8d0b8494009813b28ec241fe40c74932813 # v1
         with:
           version: ${{ steps.ver.outputs.version }}
           args: ''

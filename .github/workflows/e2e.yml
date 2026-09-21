@@ -38,7 +38,7 @@ jobs:
           fi
 
       - name: Install via addlicense-action
-        uses: GregoireF/addlicense-action@00655d78358e4165ab0b26539364fe118c28065d # v1
+        uses: GregoireF/addlicense-action@76dd4fc0543f544711767f0651ac09e43dcf8055 # v1
         with:
           version: ${{ steps.ver.outputs.version }}
           args: ''

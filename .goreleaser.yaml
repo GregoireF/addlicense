@@ -64,15 +64,8 @@ release:
   draft: false
   prerelease: auto
 
-homebrew_casks:
-  - name: addlicense
-    repository:
-      owner: GregoireF
-      name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    commit_author:
-      name: github-actions[bot]
-      email: github-actions[bot]@users.noreply.github.com
-    homepage: "https://github.com/GregoireF/addlicense"
-    description: "Fast, minimal license header manager for monorepos and CI pipelines."
-    license: "MIT"
+# Homebrew and Scoop: no section here. GregoireF/homebrew-tap pulls each
+# stable release on its own (archives checked against checksums.txt and their
+# build provenance, installs tested), and serves addlicense as a formula, not
+# a cask: macOS quarantines what a cask installs, and these binaries are not
+# notarized. The archive names are declared in the tap's tools.yml.

@@ -162,9 +162,9 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-This builds multi-platform binaries, publishes a GitHub Release, pushes a Docker image to GHCR, and updates the Homebrew tap. No manual steps.
+This builds multi-platform binaries, publishes a GitHub Release with a SLSA build provenance for every archive, and pushes a Docker image to GHCR. No manual steps.
 
-**Homebrew note:** as of GoReleaser v2, the tap formula is written to `Casks/addlicense.rb` (via `homebrew_casks:`) instead of `Formula/addlicense.rb`. The tap repository must have a `Casks/` directory present.
+**Homebrew and Scoop:** [GregoireF/homebrew-tap](https://github.com/GregoireF/homebrew-tap) pulls each stable release within 30 minutes, verifies it and publishes `Formula/addlicense.rb` and `bucket/addlicense.json`. This repository holds no token for it.
 
 ---
 

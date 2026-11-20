@@ -21,7 +21,9 @@ This triggers the GoReleaser GitHub Actions workflow (`.github/workflows/release
 1. **Builds** multi-platform binaries: Linux, macOS, Windows × amd64 + arm64
 2. **Creates** a GitHub Release with the binaries and generated release notes
 3. **Pushes** a Docker image to GHCR (`ghcr.io/gregoiref/addlicense:v0.4.0` + `:latest`)
-4. **Updates** the Homebrew tap (`GregoireF/homebrew-tap`) — writes `Casks/addlicense.rb`
+4. **Attests** every archive (SLSA build provenance, `actions/attest-build-provenance`)
+
+Within 30 minutes, the tap `GregoireF/homebrew-tap` picks the release up on its own (see below).
 
 ## Versioning rules
 
@@ -39,20 +41,20 @@ During the pre-1.0 phase (`0.x.y`), minor versions may contain breaking changes 
 
 Key decisions in [`.goreleaser.yaml`](https://github.com/GregoireF/addlicense/blob/main/.goreleaser.yaml):
 
-- **`homebrew_casks:`** — GoReleaser v2 replaced `brews:` with `homebrew_casks:`. The tap formula is written to `Casks/addlicense.rb` (not `Formula/`).
+- **No Homebrew section** — the tap pulls releases itself; addlicense holds no token for it.
 - **Docker `FROM scratch`** — the image is ~3 MB, contains only the binary. No shell, no libc. Use `docker run --rm -v "$PWD:/src" -w /src ghcr.io/gregoiref/addlicense:latest`.
 - **CGO disabled** — `CGO_ENABLED=0` ensures the binary runs on any Linux distribution.
 
 ## Homebrew tap
 
-The tap repository is [`GregoireF/homebrew-tap`](https://github.com/GregoireF/homebrew-tap). GoReleaser writes `Casks/addlicense.rb` on each release.
+The tap repository is [`GregoireF/homebrew-tap`](https://github.com/GregoireF/homebrew-tap). Every 30 minutes it reads the latest stable release, checks each archive against `checksums.txt` and its build provenance, writes `Formula/addlicense.rb` and the Scoop manifest `bucket/addlicense.json`, tests the installs on macOS, Linux and Windows, then publishes. The archive names are declared in the tap's `tools.yml`: rename an archive in `.goreleaser.yaml` only together with it.
 
 ```bash
-brew install GregoireF/tap/addlicense
-brew upgrade GregoireF/tap/addlicense
+brew install gregoiref/tap/addlicense
+scoop bucket add gregoiref https://github.com/GregoireF/homebrew-tap; scoop install gregoiref/addlicense
 ```
 
-**Note:** As of v0.3.0, the old `Formula/addlicense.rb` has been removed. Only `Casks/addlicense.rb` is maintained.
+**Note:** since 2026-11, addlicense is a formula again (`Formula/addlicense.rb`), not a cask: macOS quarantines what a cask installs, and the binaries are not notarized. Users of the cask run `brew uninstall --cask addlicense && brew install gregoiref/tap/addlicense`.
 
 ## Release checklist
 
@@ -64,7 +66,7 @@ brew upgrade GregoireF/tap/addlicense
 - [ ] GoReleaser workflow completes successfully
 - [ ] GitHub Release published with correct binaries
 - [ ] Docker image pushed to GHCR
-- [ ] Homebrew tap `Casks/addlicense.rb` updated
+- [ ] Within 30 minutes: `Formula/addlicense.rb` updated in the tap
 
 ## Hotfix process
 

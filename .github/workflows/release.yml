@@ -16,6 +16,8 @@ jobs:
     permissions:
       contents: write
       packages: write
+      id-token: write # OIDC token for the Sigstore signature of the build provenance
+      attestations: write # store the build provenance attestations
 
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -34,7 +36,13 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      # SLSA build provenance for every archive listed in checksums.txt, signed
+      # keylessly (Sigstore). Verify: gh attestation verify <archive> -R GregoireF/addlicense.
+      # GregoireF/homebrew-tap requires it before it publishes a version.
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: dist/checksums.txt
 
       # Notify downstream repos so they can publish their own release artifacts.
       # DISPATCH_TOKEN must be a PAT with public_repo scope on each target repo.

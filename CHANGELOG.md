@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Homebrew: a formula again, not a cask** — macOS quarantines what a cask installs, and the binaries are not notarized, so the cask could refuse to start. `brew install gregoiref/tap/addlicense` now installs `Formula/addlicense.rb`; users of the cask run `brew uninstall --cask addlicense` first. Scoop is new: `scoop bucket add gregoiref https://github.com/GregoireF/homebrew-tap; scoop install gregoiref/addlicense`.
+- **The tap pulls releases** — GregoireF/homebrew-tap generates the formula and the Scoop manifest from each release; the release workflow no longer needs the `HOMEBREW_TAP_TOKEN` secret.
+
+### Security
+
+- **SLSA build provenance** for every release archive (`gh attestation verify <archive> -R GregoireF/addlicense`).
+
 ---
 
 ## [1.0.1] — 2026-05-25

@@ -11,6 +11,10 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/GregoireF/addlicense/badge)](https://securityscorecards.dev/viewer/?uri=github.com/GregoireF/addlicense)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![homebrew](https://img.shields.io/endpoint?url=https://gregoiref.github.io/homebrew-tap/badges/addlicense/homebrew.json)](https://gregoiref.github.io/homebrew-tap/addlicense/)
+[![scoop](https://img.shields.io/endpoint?url=https://gregoiref.github.io/homebrew-tap/badges/addlicense/scoop.json)](https://gregoiref.github.io/homebrew-tap/addlicense/)
+[![provenance](https://img.shields.io/endpoint?url=https://gregoiref.github.io/homebrew-tap/badges/addlicense/provenance.json)](https://gregoiref.github.io/homebrew-tap/addlicense/)
+[![install-tests](https://img.shields.io/endpoint?url=https://gregoiref.github.io/homebrew-tap/badges/addlicense/install-tests.json)](https://gregoiref.github.io/homebrew-tap/addlicense/)
 
 `addlicense` scans a directory tree, detects which files are missing a license header, and injects one. On the second run, it does nothing — already-licensed files are left untouched.
 
@@ -27,8 +31,15 @@ No config required for the common case. See the **[Wiki](../../wiki)** for archi
 **Homebrew**
 
 ```bash
-brew install GregoireF/tap/addlicense
+brew install gregoiref/tap/gregoiref-addlicense
 ```
+
+The formula is `gregoiref-addlicense` because homebrew-core already has an
+`addlicense` (google/addlicense); the program it installs is still `addlicense`,
+and the old name `gregoiref/tap/addlicense` keeps working. The
+[tap's catalog page](https://gregoiref.github.io/homebrew-tap/addlicense/) lists
+every package manager that serves it (Homebrew, Scoop, WinGet, Nix, aqua) and how
+to verify a download.
 
 **Binary** — download from [Releases](https://github.com/GregoireF/addlicense/releases) (Linux, macOS, Windows — amd64 / arm64).
 

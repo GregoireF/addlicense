@@ -17,6 +17,9 @@ jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+    env:
+      # Absent on fork and Dependabot pull requests: Codecov then uploads tokenless.
+      HAS_DOPPLER: ${{ secrets.DOPPLER_TOKEN != '' }}
 
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -38,9 +41,20 @@ jobs:
       - name: Build
         run: go build ./cmd/addlicense
 
+      # Codecov refuses tokenless uploads to the protected main branch; the token
+      # lives in Doppler addlicense/ci (DOPPLER_TOKEN is managed by GregoireF/iac).
+      - name: Fetch the Codecov token from Doppler
+        id: doppler
+        if: env.HAS_DOPPLER == 'true'
+        uses: dopplerhq/secrets-fetch-action@451892f16195f9ac360e1a5bcbf0b5fd0e957534 # v2.0.0
+        with:
+          doppler-token: ${{ secrets.DOPPLER_TOKEN }}
+          inject-env-vars: false
+
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           files: coverage.out
+          token: ${{ steps.doppler.outputs.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
   lint:
